@@ -11,10 +11,10 @@ app.use(bodyParser.json());
 
 // Połączenie z bazą danych
 const db = mysql.createConnection({
-  host: "sql7.freesqldatabase.com",
-  user: "sql7774037",
-  password: "K11j9XVmNb",
-  database: "sql7774037",
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
   port: 3306,
 });
 
@@ -29,7 +29,7 @@ db.connect(err => {
 // Rejestracja użytkownika
 app.post("/register", (req, res) => {
   const { username, email, password } = req.body;
-  const query = "INSERT INTO users (username, email, password) VALUES (?, ?, ?)";
+  const query = "INgit add index.jsgit add index.jsSERT INTO users (username, email, password) VALUES (?, ?, ?)";
 
   db.query(query, [username, email, password], (err, result) => {
     if (err) {
