@@ -1,0 +1,313 @@
+-- Merging decision tree log ---
+application
+INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\main\AndroidManifest.xml:2:5-33:19
+INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml
+MERGED from [androidx.window:window:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\711c740d42f357da23f108b1f0645ba8\transformed\jetified-window-1.2.0\AndroidManifest.xml:22:5-29:19
+MERGED from [androidx.window:window:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\711c740d42f357da23f108b1f0645ba8\transformed\jetified-window-1.2.0\AndroidManifest.xml:22:5-29:19
+MERGED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:28:5-89
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\00cae66cd7d0b24bf3fb6fef49982980\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\00cae66cd7d0b24bf3fb6fef49982980\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\kerva\.gradle\caches\transforms-3\f22071537e742cef2e6c143dabfc9f2c\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\kerva\.gradle\caches\transforms-3\f22071537e742cef2e6c143dabfc9f2c\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\kerva\.gradle\caches\transforms-3\cf1ef5a3b6a18e3dfb62168a14e780f1\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\kerva\.gradle\caches\transforms-3\cf1ef5a3b6a18e3dfb62168a14e780f1\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:24:5-25:19
+	android:extractNativeLibs
+		INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
+	android:name
+		INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\main\AndroidManifest.xml
+manifest
+ADDED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\main\AndroidManifest.xml:1:1-45:12
+MERGED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\main\AndroidManifest.xml:1:1-45:12
+INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml:1:1-7:12
+INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml:1:1-7:12
+INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml:1:1-7:12
+MERGED from [:shared_preferences_android] C:\Users\kerva\GoFi\GoFi\gofi\build\shared_preferences_android\intermediates\merged_manifest\debug\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.datastore:datastore-core-android:1.1.3] C:\Users\kerva\.gradle\caches\transforms-3\2466b2a9769c4ab5560b3381ddf4951d\transformed\jetified-datastore-core-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.datastore:datastore-preferences-android:1.1.3] C:\Users\kerva\.gradle\caches\transforms-3\18fd31298ff0579941ef6a2831b2ad01\transformed\jetified-datastore-preferences-release\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.datastore:datastore-android:1.1.3] C:\Users\kerva\.gradle\caches\transforms-3\16ec22f14eeeec54588948a08ec4257c\transformed\jetified-datastore-release\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.preference:preference:1.2.1] C:\Users\kerva\.gradle\caches\transforms-3\8bf68fd21ed5dccfe004395ffbcf3199\transformed\preference-1.2.1\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.appcompat:appcompat:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\280a0e6f17de7d81b1c493092c22d303\transformed\appcompat-1.1.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.fragment:fragment-ktx:1.7.1] C:\Users\kerva\.gradle\caches\transforms-3\fea40412c163828ace18c5c08721ad66\transformed\jetified-fragment-ktx-1.7.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.fragment:fragment:1.7.1] C:\Users\kerva\.gradle\caches\transforms-3\9a454706b79fec6c9f8eece0710ec69f\transformed\fragment-1.7.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.recyclerview:recyclerview:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\645313ebfca41b3fc4f56d7b37952520\transformed\recyclerview-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.legacy:legacy-support-core-ui:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\c41175e671824139a6c035e666352403\transformed\legacy-support-core-ui-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.slidingpanelayout:slidingpanelayout:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\fafd0172f88ed64dac20d51c9c7c5bbe\transformed\slidingpanelayout-1.2.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.window:window:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\711c740d42f357da23f108b1f0645ba8\transformed\jetified-window-1.2.0\AndroidManifest.xml:17:1-31:12
+MERGED from [androidx.window:window-java:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\c9fafb93755e088c3a49996aa940e28a\transformed\jetified-window-java-1.2.0\AndroidManifest.xml:17:1-21:12
+MERGED from [androidx.activity:activity-ktx:1.8.1] C:\Users\kerva\.gradle\caches\transforms-3\572e1c48146347005d6ae3a1c9a49629\transformed\jetified-activity-ktx-1.8.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.activity:activity:1.8.1] C:\Users\kerva\.gradle\caches\transforms-3\f28e9da52a8ad00ef2072959e4b47b60\transformed\jetified-activity-1.8.1\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\87e1e2768dbb685630f52119ca1e3ce8\transformed\legacy-support-core-utils-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\e3e0cd575f71875f20af3a3f54768c40\transformed\loader-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\c24e5fa3125e63cb865738a1039b2b41\transformed\viewpager-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\424e5885486f50ade3478b72cf6f6168\transformed\jetified-lifecycle-runtime-ktx-2.7.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\42122db8a3d51323d06c92dd63207da0\transformed\lifecycle-livedata-2.7.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\50521294eff5de0a51fcb2c863e19ca5\transformed\jetified-lifecycle-livedata-core-ktx-2.7.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\6b62f48c93f11fe8a8deb1fe28a68510\transformed\jetified-lifecycle-viewmodel-ktx-2.7.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\967ea1ebe8cdf770109ec0e2ade86d9b\transformed\lifecycle-viewmodel-2.7.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\0080b9075a1edb735c03b052aaf26255\transformed\lifecycle-livedata-core-2.7.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\9419ed80fcf1ab687beb42ef2e5d1684\transformed\jetified-lifecycle-viewmodel-savedstate-2.7.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.core:core-ktx:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\0014bfc91afee96df629af8636ee66e5\transformed\jetified-core-ktx-1.13.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.appcompat:appcompat-resources:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\1ad1943f4c692a1d9ebe359de276fedc\transformed\jetified-appcompat-resources-1.1.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\d54f68384adf4576f68f674ed72ee186\transformed\drawerlayout-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\9f76973445a2930ab85050ffa8dacfeb\transformed\coordinatorlayout-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.customview:customview:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\fcae8a760c5f330826b6ceb4563b6202\transformed\customview-1.1.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.transition:transition:1.4.1] C:\Users\kerva\.gradle\caches\transforms-3\b7c890e0b2b7a1994d9669b2d1b12a0c\transformed\transition-1.4.1\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\1e51be95da621978a7496ecbf7170bcb\transformed\vectordrawable-animated-1.1.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\8130ff5961c94b18d70f20f6b630c293\transformed\vectordrawable-1.1.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\2b1f8a1312929197bcf6c3fd88df8399\transformed\swiperefreshlayout-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.asynclayoutinflater:asynclayoutinflater:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\16ce508dbfea5f11479a96e31e23f95b\transformed\asynclayoutinflater-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\afa53a3ff1fbaed556572a174fcd1666\transformed\lifecycle-runtime-2.7.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\00cae66cd7d0b24bf3fb6fef49982980\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] C:\Users\kerva\.gradle\caches\transforms-3\8d31f4159b4481fa46ddf2e4c6067b30\transformed\jetified-savedstate-ktx-1.2.1\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\kerva\.gradle\caches\transforms-3\5dbaac1576bb99d0de7cea97ff0609e6\transformed\jetified-savedstate-1.2.1\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] C:\Users\kerva\.gradle\caches\transforms-3\8a965feab6231b4adcafa11ad18f32e7\transformed\jetified-annotation-experimental-1.4.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:17:1-55:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\kerva\.gradle\caches\transforms-3\f22071537e742cef2e6c143dabfc9f2c\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.tracing:tracing:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\cb1e6ba65396c1ea9b4f977b5f5e1fe2\transformed\jetified-tracing-1.2.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\kerva\.gradle\caches\transforms-3\33db8c84b1704a6ab46b63cf0e9db8ea\transformed\core-runtime-2.2.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\kerva\.gradle\caches\transforms-3\cf1ef5a3b6a18e3dfb62168a14e780f1\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\6e4b7c5b0d23c8b46bdb8dddce843f6f\transformed\interpolator-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\5e49ea50cce61f81b055db2ada3bf306\transformed\cursoradapter-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.window.extensions.core:core:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\8174f4bfd7aca36ca04555c47adfe262\transformed\jetified-core-1.0.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.documentfile:documentfile:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\56bed50e3863626a1f67a5e64fc67d8f\transformed\documentfile-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\1d81d0b134e3d3a72d50c09dfd33d4b8\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.print:print:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\6d2acc5cb7f8a714ed73c936b9f642fa\transformed\print-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [com.getkeepsafe.relinker:relinker:1.4.5] C:\Users\kerva\.gradle\caches\transforms-3\ccca051f05a6f1887af1c9d881721a2a\transformed\jetified-relinker-1.4.5\AndroidManifest.xml:2:1-7:12
+	package
+		INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml
+	android:versionName
+		INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml
+	android:versionCode
+		INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml
+	xmlns:android
+		ADDED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\main\AndroidManifest.xml:1:11-69
+queries
+ADDED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\main\AndroidManifest.xml:39:5-44:15
+intent#action:name:android.intent.action.PROCESS_TEXT+data:mimeType:text/plain
+ADDED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\main\AndroidManifest.xml:40:9-43:18
+action#android.intent.action.PROCESS_TEXT
+ADDED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\main\AndroidManifest.xml:41:13-72
+	android:name
+		ADDED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\main\AndroidManifest.xml:41:21-70
+data
+ADDED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\main\AndroidManifest.xml:42:13-50
+	android:mimeType
+		ADDED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\main\AndroidManifest.xml:42:19-48
+uses-permission#android.permission.INTERNET
+ADDED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml:6:5-66
+	android:name
+		ADDED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml:6:22-64
+uses-sdk
+INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml
+INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml
+MERGED from [:shared_preferences_android] C:\Users\kerva\GoFi\GoFi\gofi\build\shared_preferences_android\intermediates\merged_manifest\debug\AndroidManifest.xml:5:5-44
+MERGED from [:shared_preferences_android] C:\Users\kerva\GoFi\GoFi\gofi\build\shared_preferences_android\intermediates\merged_manifest\debug\AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-core-android:1.1.3] C:\Users\kerva\.gradle\caches\transforms-3\2466b2a9769c4ab5560b3381ddf4951d\transformed\jetified-datastore-core-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-core-android:1.1.3] C:\Users\kerva\.gradle\caches\transforms-3\2466b2a9769c4ab5560b3381ddf4951d\transformed\jetified-datastore-core-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-preferences-android:1.1.3] C:\Users\kerva\.gradle\caches\transforms-3\18fd31298ff0579941ef6a2831b2ad01\transformed\jetified-datastore-preferences-release\AndroidManifest.xml:20:5-44
+MERGED from [androidx.datastore:datastore-preferences-android:1.1.3] C:\Users\kerva\.gradle\caches\transforms-3\18fd31298ff0579941ef6a2831b2ad01\transformed\jetified-datastore-preferences-release\AndroidManifest.xml:20:5-44
+MERGED from [androidx.datastore:datastore-android:1.1.3] C:\Users\kerva\.gradle\caches\transforms-3\16ec22f14eeeec54588948a08ec4257c\transformed\jetified-datastore-release\AndroidManifest.xml:20:5-44
+MERGED from [androidx.datastore:datastore-android:1.1.3] C:\Users\kerva\.gradle\caches\transforms-3\16ec22f14eeeec54588948a08ec4257c\transformed\jetified-datastore-release\AndroidManifest.xml:20:5-44
+MERGED from [androidx.preference:preference:1.2.1] C:\Users\kerva\.gradle\caches\transforms-3\8bf68fd21ed5dccfe004395ffbcf3199\transformed\preference-1.2.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.preference:preference:1.2.1] C:\Users\kerva\.gradle\caches\transforms-3\8bf68fd21ed5dccfe004395ffbcf3199\transformed\preference-1.2.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.appcompat:appcompat:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\280a0e6f17de7d81b1c493092c22d303\transformed\appcompat-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.appcompat:appcompat:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\280a0e6f17de7d81b1c493092c22d303\transformed\appcompat-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.fragment:fragment-ktx:1.7.1] C:\Users\kerva\.gradle\caches\transforms-3\fea40412c163828ace18c5c08721ad66\transformed\jetified-fragment-ktx-1.7.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.fragment:fragment-ktx:1.7.1] C:\Users\kerva\.gradle\caches\transforms-3\fea40412c163828ace18c5c08721ad66\transformed\jetified-fragment-ktx-1.7.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.fragment:fragment:1.7.1] C:\Users\kerva\.gradle\caches\transforms-3\9a454706b79fec6c9f8eece0710ec69f\transformed\fragment-1.7.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.fragment:fragment:1.7.1] C:\Users\kerva\.gradle\caches\transforms-3\9a454706b79fec6c9f8eece0710ec69f\transformed\fragment-1.7.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\645313ebfca41b3fc4f56d7b37952520\transformed\recyclerview-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\645313ebfca41b3fc4f56d7b37952520\transformed\recyclerview-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-ui:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\c41175e671824139a6c035e666352403\transformed\legacy-support-core-ui-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-ui:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\c41175e671824139a6c035e666352403\transformed\legacy-support-core-ui-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.slidingpanelayout:slidingpanelayout:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\fafd0172f88ed64dac20d51c9c7c5bbe\transformed\slidingpanelayout-1.2.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.slidingpanelayout:slidingpanelayout:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\fafd0172f88ed64dac20d51c9c7c5bbe\transformed\slidingpanelayout-1.2.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.window:window:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\711c740d42f357da23f108b1f0645ba8\transformed\jetified-window-1.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.window:window:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\711c740d42f357da23f108b1f0645ba8\transformed\jetified-window-1.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.window:window-java:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\c9fafb93755e088c3a49996aa940e28a\transformed\jetified-window-java-1.2.0\AndroidManifest.xml:19:5-44
+MERGED from [androidx.window:window-java:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\c9fafb93755e088c3a49996aa940e28a\transformed\jetified-window-java-1.2.0\AndroidManifest.xml:19:5-44
+MERGED from [androidx.activity:activity-ktx:1.8.1] C:\Users\kerva\.gradle\caches\transforms-3\572e1c48146347005d6ae3a1c9a49629\transformed\jetified-activity-ktx-1.8.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.8.1] C:\Users\kerva\.gradle\caches\transforms-3\572e1c48146347005d6ae3a1c9a49629\transformed\jetified-activity-ktx-1.8.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity:1.8.1] C:\Users\kerva\.gradle\caches\transforms-3\f28e9da52a8ad00ef2072959e4b47b60\transformed\jetified-activity-1.8.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.8.1] C:\Users\kerva\.gradle\caches\transforms-3\f28e9da52a8ad00ef2072959e4b47b60\transformed\jetified-activity-1.8.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\87e1e2768dbb685630f52119ca1e3ce8\transformed\legacy-support-core-utils-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\87e1e2768dbb685630f52119ca1e3ce8\transformed\legacy-support-core-utils-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\e3e0cd575f71875f20af3a3f54768c40\transformed\loader-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\e3e0cd575f71875f20af3a3f54768c40\transformed\loader-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\c24e5fa3125e63cb865738a1039b2b41\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\c24e5fa3125e63cb865738a1039b2b41\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\424e5885486f50ade3478b72cf6f6168\transformed\jetified-lifecycle-runtime-ktx-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\424e5885486f50ade3478b72cf6f6168\transformed\jetified-lifecycle-runtime-ktx-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\42122db8a3d51323d06c92dd63207da0\transformed\lifecycle-livedata-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\42122db8a3d51323d06c92dd63207da0\transformed\lifecycle-livedata-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\50521294eff5de0a51fcb2c863e19ca5\transformed\jetified-lifecycle-livedata-core-ktx-2.7.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\50521294eff5de0a51fcb2c863e19ca5\transformed\jetified-lifecycle-livedata-core-ktx-2.7.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\6b62f48c93f11fe8a8deb1fe28a68510\transformed\jetified-lifecycle-viewmodel-ktx-2.7.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\6b62f48c93f11fe8a8deb1fe28a68510\transformed\jetified-lifecycle-viewmodel-ktx-2.7.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\967ea1ebe8cdf770109ec0e2ade86d9b\transformed\lifecycle-viewmodel-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\967ea1ebe8cdf770109ec0e2ade86d9b\transformed\lifecycle-viewmodel-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\0080b9075a1edb735c03b052aaf26255\transformed\lifecycle-livedata-core-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\0080b9075a1edb735c03b052aaf26255\transformed\lifecycle-livedata-core-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\9419ed80fcf1ab687beb42ef2e5d1684\transformed\jetified-lifecycle-viewmodel-savedstate-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\9419ed80fcf1ab687beb42ef2e5d1684\transformed\jetified-lifecycle-viewmodel-savedstate-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core-ktx:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\0014bfc91afee96df629af8636ee66e5\transformed\jetified-core-ktx-1.13.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\0014bfc91afee96df629af8636ee66e5\transformed\jetified-core-ktx-1.13.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.appcompat:appcompat-resources:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\1ad1943f4c692a1d9ebe359de276fedc\transformed\jetified-appcompat-resources-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.appcompat:appcompat-resources:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\1ad1943f4c692a1d9ebe359de276fedc\transformed\jetified-appcompat-resources-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\d54f68384adf4576f68f674ed72ee186\transformed\drawerlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\d54f68384adf4576f68f674ed72ee186\transformed\drawerlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\9f76973445a2930ab85050ffa8dacfeb\transformed\coordinatorlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.coordinatorlayout:coordinatorlayout:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\9f76973445a2930ab85050ffa8dacfeb\transformed\coordinatorlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\fcae8a760c5f330826b6ceb4563b6202\transformed\customview-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.customview:customview:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\fcae8a760c5f330826b6ceb4563b6202\transformed\customview-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.transition:transition:1.4.1] C:\Users\kerva\.gradle\caches\transforms-3\b7c890e0b2b7a1994d9669b2d1b12a0c\transformed\transition-1.4.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.transition:transition:1.4.1] C:\Users\kerva\.gradle\caches\transforms-3\b7c890e0b2b7a1994d9669b2d1b12a0c\transformed\transition-1.4.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\1e51be95da621978a7496ecbf7170bcb\transformed\vectordrawable-animated-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\1e51be95da621978a7496ecbf7170bcb\transformed\vectordrawable-animated-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\8130ff5961c94b18d70f20f6b630c293\transformed\vectordrawable-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] C:\Users\kerva\.gradle\caches\transforms-3\8130ff5961c94b18d70f20f6b630c293\transformed\vectordrawable-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\2b1f8a1312929197bcf6c3fd88df8399\transformed\swiperefreshlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\2b1f8a1312929197bcf6c3fd88df8399\transformed\swiperefreshlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.asynclayoutinflater:asynclayoutinflater:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\16ce508dbfea5f11479a96e31e23f95b\transformed\asynclayoutinflater-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.asynclayoutinflater:asynclayoutinflater:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\16ce508dbfea5f11479a96e31e23f95b\transformed\asynclayoutinflater-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\afa53a3ff1fbaed556572a174fcd1666\transformed\lifecycle-runtime-2.7.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\afa53a3ff1fbaed556572a174fcd1666\transformed\lifecycle-runtime-2.7.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\00cae66cd7d0b24bf3fb6fef49982980\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\00cae66cd7d0b24bf3fb6fef49982980\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:21:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] C:\Users\kerva\.gradle\caches\transforms-3\8d31f4159b4481fa46ddf2e4c6067b30\transformed\jetified-savedstate-ktx-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] C:\Users\kerva\.gradle\caches\transforms-3\8d31f4159b4481fa46ddf2e4c6067b30\transformed\jetified-savedstate-ktx-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\kerva\.gradle\caches\transforms-3\5dbaac1576bb99d0de7cea97ff0609e6\transformed\jetified-savedstate-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\kerva\.gradle\caches\transforms-3\5dbaac1576bb99d0de7cea97ff0609e6\transformed\jetified-savedstate-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] C:\Users\kerva\.gradle\caches\transforms-3\8a965feab6231b4adcafa11ad18f32e7\transformed\jetified-annotation-experimental-1.4.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] C:\Users\kerva\.gradle\caches\transforms-3\8a965feab6231b4adcafa11ad18f32e7\transformed\jetified-annotation-experimental-1.4.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:21:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:21:5-44
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\kerva\.gradle\caches\transforms-3\f22071537e742cef2e6c143dabfc9f2c\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\kerva\.gradle\caches\transforms-3\f22071537e742cef2e6c143dabfc9f2c\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.tracing:tracing:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\cb1e6ba65396c1ea9b4f977b5f5e1fe2\transformed\jetified-tracing-1.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.tracing:tracing:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\cb1e6ba65396c1ea9b4f977b5f5e1fe2\transformed\jetified-tracing-1.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\kerva\.gradle\caches\transforms-3\33db8c84b1704a6ab46b63cf0e9db8ea\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\kerva\.gradle\caches\transforms-3\33db8c84b1704a6ab46b63cf0e9db8ea\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\kerva\.gradle\caches\transforms-3\cf1ef5a3b6a18e3dfb62168a14e780f1\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\kerva\.gradle\caches\transforms-3\cf1ef5a3b6a18e3dfb62168a14e780f1\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\6e4b7c5b0d23c8b46bdb8dddce843f6f\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\6e4b7c5b0d23c8b46bdb8dddce843f6f\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\5e49ea50cce61f81b055db2ada3bf306\transformed\cursoradapter-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\5e49ea50cce61f81b055db2ada3bf306\transformed\cursoradapter-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.window.extensions.core:core:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\8174f4bfd7aca36ca04555c47adfe262\transformed\jetified-core-1.0.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.window.extensions.core:core:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\8174f4bfd7aca36ca04555c47adfe262\transformed\jetified-core-1.0.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\56bed50e3863626a1f67a5e64fc67d8f\transformed\documentfile-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.documentfile:documentfile:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\56bed50e3863626a1f67a5e64fc67d8f\transformed\documentfile-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\1d81d0b134e3d3a72d50c09dfd33d4b8\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\1d81d0b134e3d3a72d50c09dfd33d4b8\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\6d2acc5cb7f8a714ed73c936b9f642fa\transformed\print-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.print:print:1.0.0] C:\Users\kerva\.gradle\caches\transforms-3\6d2acc5cb7f8a714ed73c936b9f642fa\transformed\print-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [com.getkeepsafe.relinker:relinker:1.4.5] C:\Users\kerva\.gradle\caches\transforms-3\ccca051f05a6f1887af1c9d881721a2a\transformed\jetified-relinker-1.4.5\AndroidManifest.xml:5:5-43
+MERGED from [com.getkeepsafe.relinker:relinker:1.4.5] C:\Users\kerva\.gradle\caches\transforms-3\ccca051f05a6f1887af1c9d881721a2a\transformed\jetified-relinker-1.4.5\AndroidManifest.xml:5:5-43
+	android:targetSdkVersion
+		INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from C:\Users\kerva\GoFi\GoFi\gofi\android\app\src\debug\AndroidManifest.xml
+uses-library#androidx.window.extensions
+ADDED from [androidx.window:window:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\711c740d42f357da23f108b1f0645ba8\transformed\jetified-window-1.2.0\AndroidManifest.xml:23:9-25:40
+	android:required
+		ADDED from [androidx.window:window:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\711c740d42f357da23f108b1f0645ba8\transformed\jetified-window-1.2.0\AndroidManifest.xml:25:13-37
+	android:name
+		ADDED from [androidx.window:window:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\711c740d42f357da23f108b1f0645ba8\transformed\jetified-window-1.2.0\AndroidManifest.xml:24:13-54
+uses-library#androidx.window.sidecar
+ADDED from [androidx.window:window:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\711c740d42f357da23f108b1f0645ba8\transformed\jetified-window-1.2.0\AndroidManifest.xml:26:9-28:40
+	android:required
+		ADDED from [androidx.window:window:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\711c740d42f357da23f108b1f0645ba8\transformed\jetified-window-1.2.0\AndroidManifest.xml:28:13-37
+	android:name
+		ADDED from [androidx.window:window:1.2.0] C:\Users\kerva\.gradle\caches\transforms-3\711c740d42f357da23f108b1f0645ba8\transformed\jetified-window-1.2.0\AndroidManifest.xml:27:13-51
+permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
+permission#com.example.gofi.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
+uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
+uses-permission#com.example.gofi.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.13.1] C:\Users\kerva\.gradle\caches\transforms-3\daa016f69f13885c7ebe1fbd9b243ba2\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
+provider#androidx.startup.InitializationProvider
+ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\00cae66cd7d0b24bf3fb6fef49982980\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\kerva\.gradle\caches\transforms-3\f22071537e742cef2e6c143dabfc9f2c\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\kerva\.gradle\caches\transforms-3\f22071537e742cef2e6c143dabfc9f2c\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:26:9-30:34
+	tools:node
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\00cae66cd7d0b24bf3fb6fef49982980\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:28:13-31
+	android:authorities
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\00cae66cd7d0b24bf3fb6fef49982980\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:26:13-68
+	android:exported
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\00cae66cd7d0b24bf3fb6fef49982980\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:27:13-37
+	android:name
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\00cae66cd7d0b24bf3fb6fef49982980\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:25:13-67
+meta-data#androidx.lifecycle.ProcessLifecycleInitializer
+ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\00cae66cd7d0b24bf3fb6fef49982980\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\00cae66cd7d0b24bf3fb6fef49982980\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\kerva\.gradle\caches\transforms-3\00cae66cd7d0b24bf3fb6fef49982980\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:30:17-78
+meta-data#androidx.profileinstaller.ProfileInstallerInitializer
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+receiver#androidx.profileinstaller.ProfileInstallReceiver
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+	android:enabled
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+	android:exported
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+	android:permission
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+	android:directBootAware
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+intent-filter#action:name:androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+action#androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+intent-filter#action:name:androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+action#androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+intent-filter#action:name:androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+action#androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+intent-filter#action:name:androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+action#androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\kerva\.gradle\caches\transforms-3\8321a913f035202524b12a0fd2246a26\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
