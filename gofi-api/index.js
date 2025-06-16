@@ -1,8 +1,9 @@
+
 const express = require("express");
 const mysql = require("mysql2");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-
+require("dotenv").config();
 const app = express();
 const port = 3000;
 
@@ -28,15 +29,34 @@ db.connect(err => {
 
 // Rejestracja użytkownika
 app.post("/register", (req, res) => {
-  const { username, email, password } = req.body;
-  const query = "INgit add index.jsgit add index.jsSERT INTO users (username, email, password) VALUES (?, ?, ?)";
+  const {  email,username, password } = req.body;
+  const query = "INSERT INTO users ( email,username, password) VALUES (?, ?, ?)";
 
-  db.query(query, [username, email, password], (err, result) => {
+  db.query(query, [email, username, password], (err, result) => {
     if (err) {
       console.log("Błąd zapisu:", err);
-      return res.status(500).send("Błąd serwera");
+      return res.status(500).json({ error: "Błąd serwera" });
     }
-    res.send("Użytkownik zarejestrowany!");
+    res.json({ message: "Użytkownik zarejestrowany!" });
+  });
+});
+
+// Logowanie użytkownika
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
+
+  const query = "SELECT * FROM users WHERE email = ? AND password = ?";
+  db.query(query, [email, password], (err, results) => {
+    if (err) {
+      console.log("Błąd zapytania:", err);
+      return res.status(500).json({ error: "Błąd serwera" });
+    }
+
+    if (results.length === 0) {
+      return res.status(401).json({ error: "Nieprawidłowy login lub hasło" });
+    }
+
+    res.json({ message: "Zalogowano pomyślnie", user: results[0] });
   });
 });
 

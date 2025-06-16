@@ -1,0 +1,1 @@
+ C:\\Users\\kerva\\GoFi\\.dart_tool\\flutter_build\\516a7d4815d1d0bba32cd17b045cd247\\native_assets.yaml: 
