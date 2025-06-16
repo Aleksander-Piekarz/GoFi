@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -24,7 +25,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (error.isEmpty) {
       print("Zarejestrowano");
-      Navigator.pushReplacementNamed(context, '/login');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
     } else {
       setState(() => _error = error);
     }
