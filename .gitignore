@@ -1,0 +1,41 @@
+# Flutter build
+build/
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+generated_plugin_registrant.dart
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# macOS/Linux/Windows system files
+.DS_Store
+Thumbs.db
+
+# Android/iOS
+android/.gradle/
+android/app/debug/
+android/app/profile/
+android/app/release/
+ios/Pods/
+ios/Runner.xcworkspace/
+ios/Flutter/Flutter.framework/
+ios/Flutter/Flutter.podspec
+
+# Backend (gofi-api)
+gofi-api/.env
+gofi-api/node_modules/
+gofi-api/dist/
+gofi-api/.next/
+
+# Logs & temp
+*.log
+*.tmp
+
+# Others
+pubspec.lock # (opcjonalnie – możesz zostawić jeśli chcesz wersjonować zależności)
+.env
+.env.*
