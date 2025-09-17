@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import './screens/starting_screen.dart'; // Upewnij się, że ścieżka jest poprawna
+import 'app/theme.dart';
+import 'screens/starting_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -12,11 +13,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'GoFi',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const StartingScreen(), // Ustawienie ekranu startowego
+      theme: appTheme, // <-- tu podpinamy theme
+      home: const StartingScreen(),
     );
   }
 }
