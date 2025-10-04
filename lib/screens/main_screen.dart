@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gofi/screens/starting_screen.dart';
+import '../app/theme.dart';
 
-import 'package:gofi/screens/login_screen.dart';
-import 'package:gofi/screens/register_screen.dart';
-class MainScreen extends StatelessWidget {
-  const MainScreen({super.key});
 
+//copy
+void main() {
+  runApp(const ProviderScope(child: MyApp()));
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'GoFi',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const MainScreen(),
-
-        '/login': (context) => const LoginScreen(), // jeśli masz
-        '/register': (context) => const RegisterScreen(), // jeśli masz
-      },
+      theme: appTheme,            
+      home: const StartingScreen(), 
     );
   }
 }

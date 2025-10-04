@@ -18,7 +18,7 @@ final appTheme = ThemeData(
   scaffoldBackgroundColor: AppColors.bg,
   colorScheme: const ColorScheme.dark(
     primary: AppColors.accent,
-    background: AppColors.bg,
+    surface: AppColors.bg,
   ),
   textTheme: const TextTheme(
     headlineMedium: TextStyle(fontWeight: FontWeight.w700, fontSize: 28),

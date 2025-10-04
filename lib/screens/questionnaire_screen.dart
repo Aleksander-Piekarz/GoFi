@@ -322,7 +322,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     );
   }
 
-  /// Pola pomocnicze
+
   Widget _textField(String label, TextEditingController c, {int maxLines = 1, String? hint}) {
     return TextFormField(
       controller: c,

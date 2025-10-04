@@ -1,55 +1,58 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../../models/user.dart';
+import 'api_client.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://10.0.2.2:3000';
+  final ApiClient api;
+  AuthService(this.api);
 
-  // REJESTRACJA
-  static Future<String?> register(String email, String username, String password) async {
-    final url = Uri.parse('$baseUrl/register');
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'username': username,
-          'password': password,
-        }),
-      );
+  Future<(User, String?)> login({
+    required String email,
+    required String password,
+  }) async {
+    final json = await api.post('/login', body: {
+      'email': email,
+      'password': password,
+    });
 
-      if (response.statusCode == 200) {
-        return null; // brak błędu
-      } else {
-        return jsonDecode(response.body)['message'] ?? 'Błąd rejestracji';
-      }
-    } catch (e) {
-      return 'Błąd połączenia: $e';
+    final String? token = (json['token'] ?? json['accessToken'])?.toString();
+
+    final userMap = json['user'] ?? json;
+    if (userMap is! Map<String, dynamic>) {
+      throw ApiException('Brak poprawnego pola "user" w odpowiedzi logowania');
     }
+
+    final user = User.fromJson(userMap);
+    return (user, token);
   }
 
-  // LOGOWANIE
-  static Future<String?> login(String email, String password) async {
-    final url = Uri.parse('$baseUrl/login');
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
-      );
+  Future<(User, String?)> register({
+    required String email,
+    required String password,
+    required String username,
+  }) async {
+    final json = await api.post('/register', body: {
+      'email': email,
+      'password': password,
+      'username': username,
+    });
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        print(response.statusCode);
-        print(response.body);
-        //zwracamy jeszcze informacje czy questionnaire jest wypełnione
-        return data['user']['id'].toString(); // zawsze zwracamy String
-        
-      } else {
-        return null; 
-      }
-    } catch (e) {
-      return null; 
+    final String? token = (json['token'] ?? json['accessToken'])?.toString();
+
+    final userMap = json['user'] ?? json;
+    if (userMap is! Map<String, dynamic>) {
+      throw ApiException('Brak poprawnego pola "user" w odpowiedzi rejestracji');
     }
+
+    final user = User.fromJson(userMap);
+    return (user, token);
+  }
+
+ Future<User> me() async {
+    final json = await api.get('/me');
+    final userMap = json['user'] ?? json;
+    if (userMap is! Map<String, dynamic>) {
+      throw ApiException('Brak poprawnego pola "user" w odpowiedzi /me');
+    }
+    return User.fromJson(userMap);
   }
 }

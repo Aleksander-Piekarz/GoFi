@@ -1,16 +1,21 @@
-
 const express = require("express");
 const mysql = require("mysql2");
-const bodyParser = require("body-parser");
 const cors = require("cors");
 require("dotenv").config();
+
 const app = express();
 const port = 3000;
 
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
-// Połączenie z bazą danych
+// LOG każdą prośbę – zobaczysz w konsoli, czy dochodzi POST /login
+app.use((req, _res, next) => { console.log(`${req.method} ${req.url}`); next(); });
+
+// Healthcheck do szybkiego sprawdzenia
+app.get("/health", (_req, res) => res.send("ok"));
+
+// --- DB (jak masz .env; w razie czego to może być mock) ---
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -18,50 +23,30 @@ const db = mysql.createConnection({
   database: process.env.DB_NAME,
   port: 3306,
 });
-
 db.connect(err => {
-  if (err) {
-    console.log("Błąd połączenia z bazą:", err);
-  } else {
-    console.log("Połączono z bazą MySQL!");
-  }
+  if (err) console.log("Błąd połączenia z bazą:", err);
+  else console.log("Połączono z bazą MySQL!");
 });
 
-// Rejestracja użytkownika
+// --- Rejestracja ---
 app.post("/register", (req, res) => {
-  const {  email,username, password } = req.body;
-  const query = "INSERT INTO users ( username,email, password) VALUES (?, ?, ?)";
-
-  db.query(query, [ username,email, password], (err, result) => {
-    if (err) {
-      console.log("Błąd zapisu:", err);
-      return res.status(500).json({ error: "Błąd serwera" });
-    }
+  const { email, username, password } = req.body ?? {};
+  const q = "INSERT INTO users (username,email,password) VALUES (?,?,?)";
+  db.query(q, [username, email, password], (err) => {
+    if (err) return res.status(500).json({ error: "Błąd serwera" });
     res.json({ message: "Użytkownik zarejestrowany!" });
   });
 });
 
-// Logowanie użytkownika
+// --- Logowanie (exactly /login) ---
 app.post("/login", (req, res) => {
-  const { email, password } = req.body;
-
-  const query = "SELECT * FROM users WHERE email = ? AND password = ?";
-  db.query(query, [email, password], (err, results) => {
-    if (err) {
-      console.log("Błąd zapytania:", err);
-      return res.status(500).json({ error: "Błąd serwera" });
-    }
-
-    if (results.length === 0) {
-      return res.status(401).json({ error: "Nieprawidłowy login lub hasło" });
-    }
-    const user = results[0];
-    res.json({ message: "Zalogowano pomyślnie", user: results[0] });
+  const { email, password } = req.body ?? {};
+  const q = "SELECT * FROM users WHERE email = ? AND password = ? LIMIT 1";
+  db.query(q, [email, password], (err, rows) => {
+    if (err) return res.status(500).json({ error: "Błąd serwera" });
+    if (rows.length === 0) return res.status(401).json({ error: "Nieprawidłowy login lub hasło" });
+    res.json({ message: "Zalogowano pomyślnie", user: rows[0] });
   });
-});
-
-app.listen(port, () => {
-  console.log(`Serwer działa na http://localhost:${port}`);
 });
 
 
@@ -197,3 +182,8 @@ app.put('/users/:id/questionnaire', (req, res) => {
     });
   });
 });
+
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Serwer działa na http://localhost:${port}`);
+});
+app.get('/health', (req, res) => res.send('ok'));

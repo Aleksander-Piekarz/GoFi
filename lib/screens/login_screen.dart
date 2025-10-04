@@ -1,39 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:gofi/services/api/auth_service.dart';
-import 'package:gofi/screens/home_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/user_provider.dart';
+import '../services/api/providers.dart';
+import 'home_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _loading = false;
   String? _error;
 
-  Future<void> _login() async {
-    final String? userId = await AuthService.login(
-      _emailController.text,
-      _passwordController.text,
-    );
+  Future<void> _onLogin() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+ final auth = ref.read(authServiceProvider);
+final (user, token) = await auth.login(email: _email.text, password: _password.text);
 
-    if (!mounted) return;
+ref.read(userProvider.notifier).state = user;
+ref.read(authTokenProvider.notifier).state = token;
 
-    if (userId != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Zalogowano!')),
-      );
+await ref.read(authRepositoryProvider).saveSession(user, token: token);
+
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => HomeScreen(userId: userId),
-        ),
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
-    } else {
-      setState(() => _error = 'Błąd logowania');
+    } catch (e) {
+      setState(() { _error = e.toString(); });
+    } finally {
+      if (mounted) setState(() { _loading = false; });
     }
   }
 
@@ -45,14 +48,20 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email')),
-            TextField(controller: _passwordController, decoration: const InputDecoration(labelText: 'Hasło'), obscureText: true),
+            TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email')),
+            const SizedBox(height: 12),
+            TextField(controller: _password, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
             const SizedBox(height: 20),
-            ElevatedButton(onPressed: _login, child: const Text('Zaloguj')),
-            if (_error != null) ...[
-              const SizedBox(height: 10),
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-            ]
+            if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _loading ? null : _onLogin,
+                child: Text(_loading ? 'Logging in…' : 'Login'),
+              ),
+            ),
           ],
         ),
       ),
