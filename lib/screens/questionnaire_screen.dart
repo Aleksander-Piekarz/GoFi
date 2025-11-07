@@ -1,353 +1,241 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/api/questionnaire_service.dart';
+import 'plan_screen.dart';
 
-
-class QuestionnaireService {
-  static const String _baseUrl = 'http://10.0.2.2:3000'; // iOS: 127.0.0.1
-
-  static Future<Map<String, dynamic>?> getStatus(String userId) async {
-    final uri = Uri.parse('$_baseUrl/users/$userId/questionnaire');
-    final r = await http.get(uri).timeout(const Duration(seconds: 10));
-    if (r.statusCode == 200) return Map<String, dynamic>.from(jsonDecode(r.body));
-    if (r.statusCode == 404) return null;
-    throw Exception('Server error ${r.statusCode}: ${r.body}');
-  }
-
-  static Future<Map<String, dynamic>> upsert(String userId, Map<String, dynamic> data) async {
-    final uri = Uri.parse('$_baseUrl/users/$userId/questionnaire');
-    final payload = Map<String, dynamic>.from(data)..remove('id');
-    final r = await http
-        .put(uri, headers: {'Content-Type': 'application/json'}, body: jsonEncode(payload))
-        .timeout(const Duration(seconds: 10));
-    if (r.statusCode == 200) return Map<String, dynamic>.from(jsonDecode(r.body));
-    throw Exception('Server error ${r.statusCode}: ${r.body}');
-  }
-
-  static Future<Map<String, dynamic>> submit(String userId) async {
-    final uri = Uri.parse('$_baseUrl/users/$userId/questionnaire/submit');
-    final r = await http
-        .post(uri, headers: {'Content-Type': 'application/json'})
-        .timeout(const Duration(seconds: 10));
-    final Map<String, dynamic> body =
-        r.body.isNotEmpty ? Map<String, dynamic>.from(jsonDecode(r.body)) : <String, dynamic>{};
-    if (r.statusCode == 200 || r.statusCode == 400 || r.statusCode == 404) return body;
-    throw Exception('Server error ${r.statusCode}: ${r.body}');
-  }
-}
-
-class QuestionnaireScreen extends StatefulWidget {
-  final String userId;
-  const QuestionnaireScreen({super.key, required this.userId});
-
+class QuestionnaireScreen extends ConsumerStatefulWidget {
+  const QuestionnaireScreen({super.key});
   @override
-  State<QuestionnaireScreen> createState() => _QuestionnaireScreenState();
+  ConsumerState<QuestionnaireScreen> createState() => _QuestionnaireScreenState();
 }
 
-class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
-  final _formKey = GlobalKey<FormState>();
+class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
+  List<dynamic> _questions = [];
+  final Map<String, dynamic> _answers = {};
   bool _loading = true;
-  double _progress = 0.0; // 0..1 z API
-  String _status = 'DRAFT';
-  List<String> _missing = const [];
-
-  // Kontrolery
-  final ageCtrl = TextEditingController();
-  final weightCtrl = TextEditingController();
-  final heightCtrl = TextEditingController();
-  String? gender; // Dropdown
-
-  final goalCtrl = TextEditingController();
-  final motivationCtrl = TextEditingController();
-  final experienceCtrl = TextEditingController();
-  String? activityLevel; // Dropdown
-
-  final sleepHoursCtrl = TextEditingController();
-  final workTypeCtrl = TextEditingController();
-  final availableDaysCtrl = TextEditingController();
-  final sessionLengthCtrl = TextEditingController();
-
-  final equipmentCtrl = TextEditingController();
-  final preferredExercisesCtrl = TextEditingController();
-  final injuriesCtrl = TextEditingController();
-  final illnessesCtrl = TextEditingController();
+  bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _bootstrap();
   }
 
-  @override
-  void dispose() {
-    for (final c in [
-      ageCtrl,
-      weightCtrl,
-      heightCtrl,
-      goalCtrl,
-      motivationCtrl,
-      experienceCtrl,
-      sleepHoursCtrl,
-      workTypeCtrl,
-      availableDaysCtrl,
-      sessionLengthCtrl,
-      equipmentCtrl,
-      preferredExercisesCtrl,
-      injuriesCtrl,
-      illnessesCtrl,
-    ]) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  Future<void> _bootstrap() async {
     try {
-      final status = await QuestionnaireService.getStatus(widget.userId);
-      if (status != null) {
-        _status = (status['status'] as String?) ?? 'DRAFT';
-        _progress = (status['progress'] as num?)?.toDouble() ?? 0.0;
-        _missing = (status['missing'] as List?)?.map((e) => e.toString()).toList() ?? [];
-        final q = status['questionnaire'] as Map<String, dynamic>?;
-        if (q != null) _fillFrom(q);
-      }
+      final svc = ref.read(questionnaireServiceProvider);
+      final qs = await svc.getQuestions();
+      final latest = await svc.getLatestAnswers(); // <-- PREFILL
+      setState(() {
+        _questions = qs;
+        _answers.addAll(latest); // wstępne odpowiedzi
+        _loading = false;
+      });
     } catch (e) {
-      if (mounted) _showSnack('Błąd pobierania: $e');
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Błąd kwestionariusza: $e')));
     }
   }
 
-  void _fillFrom(Map<String, dynamic> q) {
-    String? s(dynamic v) => v == null ? null : v.toString();
-    ageCtrl.text = s(q['age']) ?? '';
-    weightCtrl.text = s(q['weight']) ?? '';
-    heightCtrl.text = s(q['height']) ?? '';
-    gender = s(q['gender']);
-    goalCtrl.text = s(q['goal']) ?? '';
-    motivationCtrl.text = s(q['motivation']) ?? '';
-    experienceCtrl.text = s(q['experience']) ?? '';
-    activityLevel = s(q['activityLevel']);
-    sleepHoursCtrl.text = s(q['sleepHours']) ?? '';
-    workTypeCtrl.text = s(q['workType']) ?? '';
-    availableDaysCtrl.text = s(q['availableDays']) ?? '';
-    sessionLengthCtrl.text = s(q['sessionLength']) ?? '';
-    equipmentCtrl.text = s(q['equipment']) ?? '';
-    preferredExercisesCtrl.text = s(q['preferredExercises']) ?? '';
-    injuriesCtrl.text = s(q['injuries']) ?? '';
-    illnessesCtrl.text = s(q['illnesses']) ?? '';
+  bool _shouldShow(Map q) {
+    final cond = q['showIf'];
+    if (cond is Map) {
+      for (final entry in cond.entries) {
+        final key = entry.key as String;
+        final allowed = (entry.value as List).map((e) => e.toString()).toList();
+        final val = _answers[key]?.toString();
+        if (val == null || !allowed.contains(val)) return false;
+      }
+    }
+    return true;
   }
 
-  Map<String, dynamic> _collectPayload() {
-    num? n(String s) => s.trim().isEmpty ? null : num.tryParse(s.trim());
-    String? t(String s) => s.trim().isEmpty ? null : s.trim();
+  Widget _buildQuestion(Map q) {
+    final id = q['id'] as String;
+    final type = q['type'] as String;
+    final label = q['label'] as String? ?? id;
 
-    return {
-      'age': n(ageCtrl.text)?.toInt(),
-      'weight': n(weightCtrl.text)?.toDouble(),
-      'height': n(heightCtrl.text)?.toDouble(),
-      'gender': gender,
-      'goal': t(goalCtrl.text),
-      'motivation': t(motivationCtrl.text),
-      'experience': t(experienceCtrl.text),
-      'activityLevel': activityLevel,
-      'sleepHours': n(sleepHoursCtrl.text)?.toDouble(),
-      'workType': t(workTypeCtrl.text),
-      'availableDays': t(availableDaysCtrl.text),
-      'sessionLength': n(sessionLengthCtrl.text)?.toInt(),
-      'equipment': t(equipmentCtrl.text),
-      'preferredExercises': t(preferredExercisesCtrl.text),
-      'injuries': t(injuriesCtrl.text),
-      'illnesses': t(illnessesCtrl.text),
-    };
+    switch (type) {
+      case 'single':
+        final options = (q['options'] as List).cast<Map>();
+        final current = _answers[id]?.toString();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8, runSpacing: 8,
+              children: options.map((opt) {
+                final value = opt['value'].toString();
+                return ChoiceChip(
+                  label: Text(opt['label']?.toString() ?? value),
+                  selected: current == value,
+                  onSelected: (_) => setState(() {
+                    _answers[id] = value;
+                    if (id == 'location') _answers.remove('equipment'); // czyszczenie zależnych
+                  }),
+                );
+              }).toList(),
+            ),
+          ],
+        );
+
+      case 'multi':
+        final options = (q['options'] as List).cast<Map>();
+        final current = (_answers[id] as List?)?.map((e) => e.toString()).toSet() ?? <String>{};
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8, runSpacing: 8,
+              children: options.map((opt) {
+                final value = opt['value'].toString();
+                final selected = current.contains(value);
+                return FilterChip(
+                  label: Text(opt['label']?.toString() ?? value),
+                  selected: selected,
+                  onSelected: (on) => setState(() {
+                    final set = (_answers[id] as List?)?.map((e) => e.toString()).toSet() ?? <String>{};
+                    if (on) set.add(value); else set.remove(value);
+                    _answers[id] = set.toList();
+                  }),
+                );
+              }).toList(),
+            ),
+          ],
+        );
+
+      case 'number':
+        final min = q['min'] is num ? q['min'] as num : null;
+        final max = q['max'] is num ? q['max'] as num : null;
+        final controller = TextEditingController(text: _answers[id]?.toString() ?? '');
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: (min != null && max != null) ? '$min – $max' : null,
+                border: const OutlineInputBorder(), isDense: true,
+              ),
+              onChanged: (v) {
+                final n = int.tryParse(v);
+                setState(() => _answers[id] = n);
+              },
+            ),
+          ],
+        );
+
+      default:
+        return Text('Nieobsługiwany typ: $type');
+    }
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
+    setState(() => _saving = true);
     try {
-      final res = await QuestionnaireService.upsert(widget.userId, _collectPayload());
-      setState(() {
-        _status = (res['status'] as String?) ?? 'DRAFT';
-        _progress = (res['progress'] as num?)?.toDouble() ?? _progress;
-        _missing = (res['missing'] as List?)?.map((e) => e.toString()).toList() ?? _missing;
-      });
-      _showSnack('Zapisano');
-    } catch (e) {
-      _showSnack('Błąd zapisu: $e');
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _submit() async {
-    setState(() => _loading = true);
-    try {
-      final res = await QuestionnaireService.submit(widget.userId);
-      if (res['error'] != null) {
-        final missing = (res['missing'] as List?)?.map((e) => e.toString()).join(', ') ?? '';
-        _showSnack('Niekompletna: $missing');
-      } else {
-        _showSnack('Wysłano ankietę');
-        setState(() => _status = 'SUBMITTED');
+      // prosta walidacja: wymagamy odpowiedzi dla widocznych pytań
+      for (final raw in _questions) {
+        final q = raw as Map;
+        if (!_shouldShow(q)) continue;
+        final id = q['id'];
+        final optional = (q['optional'] ?? false) as bool;
+        final v = _answers[id];
+        if (!optional && (v == null || (v is List && v.isEmpty))) {
+          throw 'Uzupełnij: ${q['label'] ?? id}';
+        }
       }
+      final svc = ref.read(questionnaireServiceProvider);
+      await svc.saveAnswers(_answers);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Zapisano odpowiedzi')));
+      Navigator.pop(context);
     } catch (e) {
-      _showSnack('Błąd wysyłki: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Błąd: $e')));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _saving = false);
     }
   }
 
-  void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  Future<void> _saveAndGenerate() async {
+  setState(() => _saving = true);
+  try {
+    // 1) walidacja jak w _save()
+    for (final raw in _questions) {
+      final q = raw as Map;
+      if (!_shouldShow(q)) continue;
+      final id = q['id'];
+      final optional = (q['optional'] ?? false) as bool;
+      final v = _answers[id];
+      if (!optional && (v == null || (v is List && v.isEmpty))) {
+        throw 'Uzupełnij: ${q['label'] ?? id}';
+      }
+    }
+
+    final svc = ref.read(questionnaireServiceProvider);
+    final result = await svc.submitAndGetPlan(_answers);
+    if (!mounted) return;
+
+    // przejście do PlanScreen z wynikiem
+    Navigator.push(context,
+      MaterialPageRoute(builder: (_) => PlanScreen(plan: result['plan'] as Map<String, dynamic>)));
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Błąd: $e')));
+  } finally {
+    if (mounted) setState(() => _saving = false);
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Kwestionariusz'),
-        actions: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(_status, style: const TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ],
+      appBar: AppBar(title: const Text('Kwestionariusz')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: ListView.separated(
+          itemCount: _questions.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          itemBuilder: (_, i) {
+            final q = _questions[i] as Map;
+            if (!_shouldShow(q)) return const SizedBox.shrink();
+            return _buildQuestion(q);
+          },
+        ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  LinearProgressIndicator(value: _progress, minHeight: 8),
-                  const SizedBox(height: 12),
-
-                  Row(
-                    children: [
-                      Expanded(child: _numField('Wiek', ageCtrl, min: 10, max: 120)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _numField('Waga (kg)', weightCtrl, min: 20, max: 400, allowDecimal: true)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(child: _numField('Wzrost (cm)', heightCtrl, min: 100, max: 250, allowDecimal: true)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: gender,
-                          decoration: const InputDecoration(labelText: 'Płeć'),
-                          items: const [
-                            DropdownMenuItem(value: 'Mężczyzna', child: Text('Mężczyzna')),
-                            DropdownMenuItem(value: 'Kobieta', child: Text('Kobieta')),
-                            DropdownMenuItem(value: 'Inna', child: Text('Inna')),
-                          ],
-                          onChanged: (v) => setState(() => gender = v),
-                          validator: (v) => v == null || v.isEmpty ? 'Wybierz płeć' : null,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-                  _textField('Cel (goal)', goalCtrl, maxLines: 2),
-                  _textField('Motywacja', motivationCtrl, maxLines: 2),
-                  _textField('Doświadczenie', experienceCtrl, maxLines: 2),
-
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: activityLevel,
-                    decoration: const InputDecoration(labelText: 'Poziom aktywności'),
-                    items: const [
-                      DropdownMenuItem(value: 'niski', child: Text('Niski')),
-                      DropdownMenuItem(value: 'umiarkowany', child: Text('Umiarkowany')),
-                      DropdownMenuItem(value: 'wysoki', child: Text('Wysoki')),
-                    ],
-                    onChanged: (v) => setState(() => activityLevel = v),
-                    validator: (v) => v == null || v.isEmpty ? 'Wybierz poziom aktywności' : null,
-                  ),
-
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(child: _numField('Sen (h)', sleepHoursCtrl, min: 0, max: 24, allowDecimal: true)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _numField('Sesja (min)', sessionLengthCtrl, min: 10, max: 240)),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-                  _textField('Rodzaj pracy', workTypeCtrl),
-                  _textField('Dostępne dni', availableDaysCtrl, hint: 'np. Pon, Śr, Pt'),
-                  _textField('Sprzęt', equipmentCtrl),
-                  _textField('Preferowane ćwiczenia', preferredExercisesCtrl),
-                  _textField('Kontuzje', injuriesCtrl),
-                  _textField('Choroby', illnessesCtrl),
-
-                  const SizedBox(height: 16),
-                  if (_missing.isNotEmpty)
-                    Text('Brakuje: ${_missing.join(', ')}', style: const TextStyle(color: Colors.red)),
-
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _save,
-                          icon: const Icon(Icons.save),
-                          label: const Text('Zapisz'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: _submit,
-                          icon: const Icon(Icons.send),
-                          label: const Text('Wyślij'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-    );
-  }
-
-
-  Widget _textField(String label, TextEditingController c, {int maxLines = 1, String? hint}) {
-    return TextFormField(
-      controller: c,
-      maxLines: maxLines,
-      decoration: InputDecoration(labelText: label, hintText: hint),
-      validator: (v) => (v == null || v.trim().isEmpty) ? 'Wymagane pole' : null,
-    );
-  }
-
-  Widget _numField(String label, TextEditingController c, {double? min, double? max, bool allowDecimal = false}) {
-    return TextFormField(
-      controller: c,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(allowDecimal ? r'[0-9\.]' : r'[0-9]')),
-      ],
-      decoration: InputDecoration(labelText: label),
-      validator: (v) {
-        if (v == null || v.trim().isEmpty) return 'Wymagane pole';
-        final val = double.tryParse(v.trim());
-        if (val == null) return 'Nieprawidłowa liczba';
-        if (min != null && val < min) return 'Min $min';
-        if (max != null && val > max) return 'Max $max';
-        return null;
-      },
+bottomNavigationBar: SafeArea(
+  minimum: const EdgeInsets.all(16),
+  child: Row(
+    children: [
+      Expanded(
+        child: OutlinedButton(
+          onPressed: _saving ? null : _save,
+          child: Text(_saving ? 'Zapisywanie…' : 'Zapisz'),
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: FilledButton(
+          onPressed: _saving ? null : _saveAndGenerate,
+          child: Text(_saving ? 'Generowanie…' : 'Zapisz + Plan'),
+        ),
+      ),
+    ],
+  ),
+),
+      
     );
   }
 }

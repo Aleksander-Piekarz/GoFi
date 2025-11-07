@@ -1,10 +1,6 @@
-// lib/screens/register_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api/providers.dart';
-import '../providers/user_provider.dart';
-import '../../repositories/auth_repository.dart';
-import 'home_screen.dart'; // albo login_screen.dart jeśli wolisz wrócić do logowania
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -16,33 +12,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final emailController = TextEditingController();
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
-  String? _error;
+
   bool _loading = false;
 
-  Future<void> _register() async {
-    setState(() { _loading = true; _error = null; });
+  Future<void> _doRegister() async {
+    setState(() => _loading = true);
     try {
       final auth = ref.read(authServiceProvider);
-      final (user, token) = await auth.register(
+
+      
+      final user = await auth.register(
         email: emailController.text.trim(),
-        username: usernameController.text.trim(),
         password: passwordController.text,
+        username: usernameController.text.trim(),
       );
 
-      ref.read(userProvider.notifier).state = user;
-      ref.read(authTokenProvider.notifier).state = token;
+      if (user != null) {
+        debugPrint('Zarejestrowano użytkownika: $user');
+      }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Rejestracja zakończona sukcesem!')),
-      );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
+      
+      Navigator.pushReplacementNamed(context, '/');
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Błąd rejestracji: $e')),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -56,15 +52,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email')),
-            TextField(controller: usernameController, decoration: const InputDecoration(labelText: 'Nazwa użytkownika')),
-            TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'Hasło'), obscureText: true),
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
+            TextField(
+              controller: usernameController,
+              decoration:
+                  const InputDecoration(labelText: 'Nazwa użytkownika'),
+            ),
+            TextField(
+              controller: passwordController,
+              decoration:
+                  const InputDecoration(labelText: 'Hasło'),
+              obscureText: true,
+            ),
             const SizedBox(height: 20),
-            ElevatedButton(onPressed: _loading ? null : _register, child: Text(_loading ? 'Rejestrowanie…' : 'Zarejestruj')),
-            if (_error != null) ...[
-              const SizedBox(height: 10),
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-            ]
+            ElevatedButton(
+              onPressed: _loading ? null : _doRegister,
+              child: Text(_loading ? 'Rejestrowanie…' : 'Zarejestruj'),
+            ),
           ],
         ),
       ),

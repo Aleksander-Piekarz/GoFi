@@ -1,58 +1,78 @@
-import '../../models/user.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_client.dart';
+import 'providers.dart';
 
 class AuthService {
   final ApiClient api;
-  AuthService(this.api);
+  final FlutterSecureStorage storage;
+  final Ref tokenProvider;
 
-  Future<(User, String?)> login({
-    required String email,
-    required String password,
-  }) async {
-    final json = await api.post('/login', body: {
-      'email': email,
-      'password': password,
-    });
+  AuthService({
+    required this.api,
+    required this.storage,
+    required this.tokenProvider,
+  });
 
-    final String? token = (json['token'] ?? json['accessToken'])?.toString();
-
-    final userMap = json['user'] ?? json;
-    if (userMap is! Map<String, dynamic>) {
-      throw ApiException('Brak poprawnego pola "user" w odpowiedzi logowania');
-    }
-
-    final user = User.fromJson(userMap);
-    return (user, token);
+  Future<void> saveToken(String token) async {
+    await storage.write(key: 'token', value: token);
+    tokenProvider.read(authTokenProvider.notifier).state = token;
   }
 
-  Future<(User, String?)> register({
+  Future<void> clearToken() async {
+    await storage.delete(key: 'token');
+    tokenProvider.read(authTokenProvider.notifier).state = null;
+  }
+
+  Future<String?> readSavedToken() => storage.read(key: 'token');
+
+Future<Map<String, dynamic>?> login({
+  required String email,
+  required String password,
+}) async {
+  final res = await api.post('/auth/login', body: {
+    'email': email,
+    'password': password,
+  });
+
+  final token = res['token'] as String?;
+  if (token != null && token.isNotEmpty) {
+    await saveToken(token);
+  }
+
+  final user = res['user'];
+  if (user is Map<String, dynamic>) return user;
+
+  return null;
+}
+
+  /// Rejestracja — zwraca usera (jeśli jest), nic nie zapisuje poza tokenem.
+  Future<Map<String, dynamic>?> register({
     required String email,
     required String password,
-    required String username,
+    String? username,
   }) async {
-    final json = await api.post('/register', body: {
+    final res = await api.post('/auth/register', body: {
       'email': email,
       'password': password,
       'username': username,
     });
 
-    final String? token = (json['token'] ?? json['accessToken'])?.toString();
-
-    final userMap = json['user'] ?? json;
-    if (userMap is! Map<String, dynamic>) {
-      throw ApiException('Brak poprawnego pola "user" w odpowiedzi rejestracji');
+    final token = res['token'] as String?;
+    if (token != null && token.isNotEmpty) {
+      await saveToken(token);
     }
 
-    final user = User.fromJson(userMap);
-    return (user, token);
+    final user = res['user'];
+    if (user is Map<String, dynamic>) return user;
+
+    return null;
   }
 
- Future<User> me() async {
-    final json = await api.get('/me');
-    final userMap = json['user'] ?? json;
-    if (userMap is! Map<String, dynamic>) {
-      throw ApiException('Brak poprawnego pola "user" w odpowiedzi /me');
-    }
-    return User.fromJson(userMap);
+  Future<Map<String, dynamic>> me() async {
+    final res = await api.get('/auth/me');
+    return res;
   }
+
+  Future<void> logout() async => clearToken();
 }

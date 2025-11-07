@@ -1,16 +1,47 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api_client.dart';
+import 'providers.dart';
+
+final questionnaireServiceProvider = Provider<QuestionnaireService>((ref) {
+  final api = ref.read(apiClientProvider);
+  return QuestionnaireService(api);
+});
 
 class QuestionnaireService {
-  final ApiClient api;
-  QuestionnaireService(this.api);
+  QuestionnaireService(this._api);
+  final ApiClient _api;
 
-  Future<List<Map<String, dynamic>>> fetchQuestions() async {
-    final json = await api.get('/questionnaire/questions');
-    final list = (json['data'] ?? json['questions'] ?? []) as List;
-    return list.cast<Map<String, dynamic>>();
+  Future<List<dynamic>> getQuestions() async {
+    final res = await _api.get('/questionnaire');
+    final obj = res['data'] ?? res; 
+    if (obj is List) return obj.cast<dynamic>();
+    throw const ApiException('Nieoczekiwany kształt odpowiedzi dla /questionnaire');
   }
 
-  Future<void> submitAnswers(Map<String, dynamic> payload) async {
-    await api.post('/questionnaire/answers', body: payload);
+  Future<Map<String, dynamic>> getLatestAnswers() async {
+    final res = await _api.get('/questionnaire/answers/latest');
+    final obj = res['data'] ?? res;
+    if (obj is Map) {
+
+      return Map<String, dynamic>.from(obj);
+    }
+
+    return <String, dynamic>{};
   }
+
+  Future<void> saveAnswers(Map<String, dynamic> answers) async {
+    await _api.post('/questionnaire/answers', body: answers);
+  }
+Future<Map<String, dynamic>> submitAndGetPlan(Map<String, dynamic> answers) async {
+  final res = await _api.post('/questionnaire/submit', body: answers);
+  final obj = res['data'] ?? res;
+  return Map<String, dynamic>.from(obj as Map);
+}
+
+Future<Map<String, dynamic>> getLatestPlan() async {
+  final res = await _api.get('/questionnaire/plan/latest');
+  final obj = res['data'] ?? res;
+  return Map<String, dynamic>.from(obj as Map);
+}
+
 }

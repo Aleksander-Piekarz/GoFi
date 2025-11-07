@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/user_provider.dart';
 import '../services/api/providers.dart';
-import 'home_screen.dart';
+
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -12,54 +11,76 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _email = TextEditingController();
-  final _password = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
   bool _loading = false;
   String? _error;
 
-  Future<void> _onLogin() async {
-    setState(() { _loading = true; _error = null; });
+  Future<void> _doLogin() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
     try {
- final auth = ref.read(authServiceProvider);
-final (user, token) = await auth.login(email: _email.text, password: _password.text);
+      final auth = ref.read(authServiceProvider);
 
-ref.read(userProvider.notifier).state = user;
-ref.read(authTokenProvider.notifier).state = token;
+      // nowy AuthService zwraca tylko user (Map<String, dynamic>?)
+      final user = await auth.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-await ref.read(authRepositoryProvider).saveSession(user, token: token);
+      if (user != null) {
+        debugPrint('Zalogowano użytkownika: $user');
+      }
 
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
+      Navigator.pushReplacementNamed(context, '/'); // przejście dalej
     } catch (e) {
-      setState(() { _error = e.toString(); });
+      if (!mounted) return;
+      setState(() => _error = e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Błąd logowania: $e')),
+      );
     } finally {
-      if (mounted) setState(() { _loading = false; });
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: AppBar(title: const Text('Logowanie')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email')),
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
             const SizedBox(height: 12),
-            TextField(controller: _password, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+            TextField(
+              controller: _passwordController,
+              decoration: const InputDecoration(labelText: 'Hasło'),
+              obscureText: true,
+            ),
             const SizedBox(height: 20),
-            if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+            if (_error != null)
+              Text(
+                _error!,
+                style: const TextStyle(color: Colors.red),
+              ),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: _loading ? null : _onLogin,
-                child: Text(_loading ? 'Logging in…' : 'Login'),
+                onPressed: _loading ? null : _doLogin,
+                child: Text(_loading ? 'Logowanie…' : 'Zaloguj'),
               ),
             ),
           ],

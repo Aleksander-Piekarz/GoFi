@@ -1,0 +1,89 @@
+[
+  {"code":"PUSHUPS","name":"Push-ups","muscle_group":"chest","pattern":"push_h","equipment":["bodyweight"],"location":["home","gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":4,"notes":"warianty: kolana/diamentowe"},
+  {"code":"DB_PRESS","name":"DB Bench Press","muscle_group":"chest","pattern":"push_h","equipment":["dumbbells"],"location":["home","gym"],"difficulty":2,"unilateral":false,"is_machine":false,"minutes_est":6},
+  {"code":"BENCH_PRESS_BB","name":"Barbell Bench Press","muscle_group":"chest","pattern":"push_h","equipment":["barbell","machines"],"location":["gym"],"difficulty":3,"unilateral":false,"is_machine":false,"minutes_est":7},
+  {"code":"CHEST_PRESS_MACHINE","name":"Chest Press (Machine)","muscle_group":"chest","pattern":"push_h","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":6},
+  {"code":"INCLINE_DB_PRESS","name":"Incline DB Press","muscle_group":"chest","pattern":"push_h","equipment":["dumbbells"],"location":["home","gym"],"difficulty":2,"unilateral":false,"is_machine":false,"minutes_est":6},
+  {"code":"INCLINE_BB_PRESS","name":"Incline Barbell Press","muscle_group":"chest","pattern":"push_h","equipment":["barbell","machines"],"location":["gym"],"difficulty":3,"unilateral":false,"is_machine":false,"minutes_est":7},
+  {"code":"machines_FLY","name":"machines Fly","muscle_group":"chest","pattern":"accessory","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":5},
+
+  {"code":"DB_ROW","name":"One-arm DB Row","muscle_group":"back","pattern":"pull_h","equipment":["dumbbells"],"location":["home","gym"],"difficulty":2,"unilateral":true,"is_machine":false,"minutes_est":6},
+  {"code":"SEATED_ROW","name":"Seated Row (Machine)","muscle_group":"back","pattern":"pull_h","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":6},
+  {"code":"BENT_OVER_ROW_BB","name":"Bent-Over Row (Barbell)","muscle_group":"back","pattern":"pull_h","equipment":["barbell"],"location":["gym"],"difficulty":3,"unilateral":false,"is_machine":false,"minutes_est":7},
+  {"code":"LAT_PULLDOWN","name":"Lat Pulldown","muscle_group":"back","pattern":"pull_v","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":6},
+  {"code":"PULLUPS","name":"Pull-ups","muscle_group":"back","pattern":"pull_v","equipment":["bodyweight"],"location":["home","gym"],"difficulty":3,"unilateral":false,"is_machine":false,"minutes_est":6},
+  {"code":"INVERTED_ROW","name":"Inverted Row","muscle_group":"back","pattern":"pull_h","equipment":["bodyweight","machines"],"location":["home","gym"],"difficulty":2,"unilateral":false,"is_machine":false,"minutes_est":5},
+  {"code":"FACE_PULL","name":"Face Pull","muscle_group":"back","pattern":"accessory","equipment":["machines","bands"],"location":["home","gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":5},
+
+  {"code":"BACK_SQUAT","name":"Back Squat","muscle_group":"legs","pattern":"squat","equipment":["barbell","machines"],"location":["gym"],"difficulty":4,"unilateral":false,"is_machine":false,"minutes_est":8},
+  {"code":"FRONT_SQUAT","name":"Front Squat","muscle_group":"legs","pattern":"squat","equipment":["barbell"],"location":["gym"],"difficulty":4,"unilateral":false,"is_machine":false,"minutes_est":8},
+  {"code":"GOBLET_SQUAT","name":"Goblet Squat","muscle_group":"legs","pattern":"squat","equipment":["dumbbells","kettlebell"],"location":["home","gym"],"difficulty":2,"unilateral":false,"is_machine":false,"minutes_est":6},
+  {"code":"LEG_PRESS","name":"Leg Press","muscle_group":"legs","pattern":"squat","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":6},
+  {"code":"WALKING_LUNGE_DB","name":"Walking Lunge (DB)","muscle_group":"legs","pattern":"lunge","equipment":["dumbbells"],"location":["home","gym"],"difficulty":3,"unilateral":true,"is_machine":false,"minutes_est":7},
+  {"code":"SPLIT_SQUAT","name":"Split Squat","muscle_group":"legs","pattern":"lunge","equipment":["bodyweight","dumbbells"],"location":["home","gym"],"difficulty":3,"unilateral":true,"is_machine":false,"minutes_est":6},
+  {"code":"BULGARIAN_SPLIT_SQUAT","name":"Bulgarian Split Squat","muscle_group":"legs","pattern":"lunge","equipment":["dumbbells","barbell"],"location":["home","gym"],"difficulty":4,"unilateral":true,"is_machine":false,"minutes_est":7},
+
+  {"code":"RDL","name":"Romanian Deadlift","muscle_group":"legs","pattern":"hinge","equipment":["barbell","dumbbells"],"location":["home","gym"],"difficulty":3,"unilateral":false,"is_machine":false,"minutes_est":7},
+  {"code":"DEADLIFT","name":"Conventional Deadlift","muscle_group":"legs","pattern":"hinge","equipment":["barbell"],"location":["gym"],"difficulty":4,"unilateral":false,"is_machine":false,"minutes_est":8},
+  {"code":"HIP_THRUST_BB","name":"Barbell Hip Thrust","muscle_group":"legs","pattern":"hinge","equipment":["barbell","machines"],"location":["gym"],"difficulty":3,"unilateral":false,"is_machine":false,"minutes_est":7},
+  {"code":"GLUTE_BRIDGE","name":"Glute Bridge","muscle_group":"legs","pattern":"hinge","equipment":["bodyweight","dumbbells","bands"],"location":["home","gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":5},
+  {"code":"LEG_CURL_MACHINE","name":"Leg Curl (Machine)","muscle_group":"legs","pattern":"accessory","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":5},
+  {"code":"LEG_EXTENSION","name":"Leg Extension (Machine)","muscle_group":"legs","pattern":"accessory","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":5},
+  {"code":"CALF_RAISE_MACHINE","name":"Calf Raise (Machine)","muscle_group":"legs","pattern":"accessory","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":4},
+  {"code":"STANDING_CALF_RAISE","name":"Standing Calf Raise","muscle_group":"legs","pattern":"accessory","equipment":["bodyweight","dumbbells","barbell"],"location":["home","gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":4},
+
+  {"code":"OH_PRESS_DB","name":"DB Overhead Press","muscle_group":"shoulders","pattern":"push_v","equipment":["dumbbells"],"location":["home","gym"],"difficulty":2,"unilateral":false,"is_machine":false,"minutes_est":6},
+  {"code":"OH_PRESS_BB","name":"Barbell Overhead Press","muscle_group":"shoulders","pattern":"push_v","equipment":["barbell","machines"],"location":["gym"],"difficulty":4,"unilateral":false,"is_machine":false,"minutes_est":7},
+  {"code":"MACHINE_SH_PRESS","name":"Shoulder Press (Machine)","muscle_group":"shoulders","pattern":"push_v","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":6},
+  {"code":"LATERAL_RAISE_DB","name":"DB Lateral Raise","muscle_group":"shoulders","pattern":"accessory","equipment":["dumbbells","machines"],"location":["home","gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":5},
+  {"code":"REAR_DELT_FLY","name":"Rear Delt Fly","muscle_group":"shoulders","pattern":"accessory","equipment":["dumbbells","machines"],"location":["home","gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":5},
+
+  {"code":"BARBELL_CURL","name":"Barbell Curl","muscle_group":"arms","pattern":"accessory","equipment":["barbell"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":5},
+  {"code":"DB_CURL","name":"DB Curl","muscle_group":"arms","pattern":"accessory","equipment":["dumbbells"],"location":["home","gym"],"difficulty":1,"unilateral":true,"is_machine":false,"minutes_est":5},
+  {"code":"machines_CURL","name":"machines Curl","muscle_group":"arms","pattern":"accessory","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":5},
+  {"code":"TRICEPS_PUSHDOWN","name":"Triceps Pushdown","muscle_group":"arms","pattern":"accessory","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":5},
+  {"code":"SKULLCRUSHER","name":"Skullcrusher (EZ)","muscle_group":"arms","pattern":"accessory","equipment":["barbell","dumbbells"],"location":["gym","home"],"difficulty":2,"unilateral":false,"is_machine":false,"minutes_est":6},
+  {"code":"DIPS","name":"Dips","muscle_group":"arms","pattern":"push_h","equipment":["bodyweight"],"location":["gym","home"],"difficulty":3,"unilateral":false,"is_machine":false,"minutes_est":6},
+
+  {"code":"PLANK","name":"Plank","muscle_group":"core","pattern":"core","equipment":["none","bodyweight"],"location":["home","gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":4},
+  {"code":"HOLLOW_HOLD","name":"Hollow Hold","muscle_group":"core","pattern":"core","equipment":["none","bodyweight"],"location":["home","gym"],"difficulty":2,"unilateral":false,"is_machine":false,"minutes_est":4},
+  {"code":"DEAD_BUG","name":"Dead Bug","muscle_group":"core","pattern":"core","equipment":["none","bodyweight"],"location":["home","gym"],"difficulty":1,"unilateral":true,"is_machine":false,"minutes_est":4},
+  {"code":"machines_CRUNCH","name":"machines Crunch","muscle_group":"core","pattern":"core","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":5},
+  {"code":"HANGING_LEG_RAISE","name":"Hanging Leg Raise","muscle_group":"core","pattern":"core","equipment":["bodyweight"],"location":["gym"],"difficulty":3,"unilateral":false,"is_machine":false,"minutes_est":6},
+  {"code":"RUSSIAN_TWIST","name":"Russian Twist (DB)","muscle_group":"core","pattern":"core","equipment":["dumbbells","kettlebell"],"location":["home","gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":5},
+
+  {"code":"FARMER_CARRY","name":"Farmer Carry (DB)","muscle_group":"full","pattern":"carry","equipment":["dumbbells","kettlebell"],"location":["home","gym"],"difficulty":2,"unilateral":false,"is_machine":false,"minutes_est":6},
+  {"code":"SLED_PUSH","name":"Sled Push","muscle_group":"full","pattern":"carry","equipment":["machines"],"location":["gym"],"difficulty":3,"unilateral":false,"is_machine":true,"minutes_est":7},
+  {"code":"ROWER","name":"Row Ergometer","muscle_group":"full","pattern":"accessory","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":10,"notes":"cardio/finisher"},
+  {"code":"BIKE","name":"Air Bike / Stationary Bike","muscle_group":"full","pattern":"accessory","equipment":["machines"],"location":["gym","home"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":10,"notes":"cardio/finisher"},
+  {"code":"TREADMILL_INCLINE","name":"Treadmill Incline Walk","muscle_group":"full","pattern":"accessory","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":10,"notes":"cardio"},
+
+  {"code":"machines_ROW","name":"machines Row","muscle_group":"back","pattern":"pull_h","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":6},
+  {"code":"CHEST_SUPPORTED_ROW","name":"Chest-supported Row","muscle_group":"back","pattern":"pull_h","equipment":["machines","dumbbells"],"location":["gym"],"difficulty":2,"unilateral":false,"is_machine":true,"minutes_est":6},
+  {"code":"PENDLAY_ROW","name":"Pendlay Row","muscle_group":"back","pattern":"pull_h","equipment":["barbell"],"location":["gym"],"difficulty":4,"unilateral":false,"is_machine":false,"minutes_est":7},
+
+  {"code":"ARNOLD_PRESS","name":"Arnold Press (DB)","muscle_group":"shoulders","pattern":"push_v","equipment":["dumbbells"],"location":["home","gym"],"difficulty":3,"unilateral":false,"is_machine":false,"minutes_est":6},
+  {"code":"UPRIGHT_ROW","name":"Upright Row (machines/BB)","muscle_group":"shoulders","pattern":"accessory","equipment":["machines","barbell","dumbbells"],"location":["gym","home"],"difficulty":2,"unilateral":false,"is_machine":false,"minutes_est":5},
+
+  {"code":"CHEST_DIP_ASSIST","name":"Assisted Dips (Machine)","muscle_group":"arms","pattern":"push_h","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":6},
+  {"code":"PREACHER_CURL","name":"Preacher Curl","muscle_group":"arms","pattern":"accessory","equipment":["machines","barbell"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":5},
+  {"code":"HAMMER_CURL","name":"Hammer Curl (DB)","muscle_group":"arms","pattern":"accessory","equipment":["dumbbells"],"location":["home","gym"],"difficulty":1,"unilateral":true,"is_machine":false,"minutes_est":5},
+  {"code":"OVERHEAD_TRICEPS_DB","name":"Overhead Triceps (DB)","muscle_group":"arms","pattern":"accessory","equipment":["dumbbells","machines"],"location":["home","gym"],"difficulty":1,"unilateral":true,"is_machine":false,"minutes_est":5},
+
+  {"code":"GOOD_MORNING","name":"Good Morning (BB)","muscle_group":"legs","pattern":"hinge","equipment":["barbell"],"location":["gym"],"difficulty":4,"unilateral":false,"is_machine":false,"minutes_est":7},
+  {"code":"ZERCHER_SQUAT","name":"Zercher Squat","muscle_group":"legs","pattern":"squat","equipment":["barbell"],"location":["gym"],"difficulty":4,"unilateral":false,"is_machine":false,"minutes_est":8},
+  {"code":"HACK_SQUAT_MACHINE","name":"Hack Squat (Machine)","muscle_group":"legs","pattern":"squat","equipment":["machines"],"location":["gym"],"difficulty":2,"unilateral":false,"is_machine":true,"minutes_est":6},
+  {"code":"machines_SQUAT","name":"machines Squat","muscle_group":"legs","pattern":"squat","equipment":["machines"],"location":["gym"],"difficulty":2,"unilateral":false,"is_machine":true,"minutes_est":6},
+
+  {"code":"machines_LATERAL_RAISE","name":"machines Lateral Raise","muscle_group":"shoulders","pattern":"accessory","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":true,"is_machine":false,"minutes_est":5},
+  {"code":"REVERSE_HYPER","name":"Reverse Hyper","muscle_group":"legs","pattern":"hinge","equipment":["machines"],"location":["gym"],"difficulty":1,"unilateral":false,"is_machine":true,"minutes_est":6},
+  {"code":"GHR","name":"Glute-Ham Raise","muscle_group":"legs","pattern":"hinge","equipment":["machines"],"location":["gym"],"difficulty":3,"unilateral":false,"is_machine":true,"minutes_est":6},
+
+  {"code":"LANDMINE_PRESS","name":"Landmine Press","muscle_group":"shoulders","pattern":"push_v","equipment":["barbell"],"location":["gym"],"difficulty":2,"unilateral":false,"is_machine":false,"minutes_est":6},
+  {"code":"LANDMINE_ROW","name":"Landmine Row","muscle_group":"back","pattern":"pull_h","equipment":["barbell"],"location":["gym"],"difficulty":2,"unilateral":false,"is_machine":false,"minutes_est":6},
+
+  {"code":"KB_SWING","name":"Kettlebell Swing","muscle_group":"full","pattern":"hinge","equipment":["kettlebell"],"location":["home","gym"],"difficulty":2,"unilateral":false,"is_machine":false,"minutes_est":6},
+  {"code":"KB_CLEAN_PRESS","name":"KB Clean & Press","muscle_group":"full","pattern":"push_v","equipment":["kettlebell"],"location":["home","gym"],"difficulty":3,"unilateral":true,"is_machine":false,"minutes_est":7},
+  {"code":"BAND_PULL_APART","name":"Band Pull-Apart","muscle_group":"back","pattern":"accessory","equipment":["bands"],"location":["home","gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":4},
+  {"code":"BAND_FACE_PULL","name":"Band Face Pull","muscle_group":"back","pattern":"accessory","equipment":["bands"],"location":["home","gym"],"difficulty":1,"unilateral":false,"is_machine":false,"minutes_est":4}
+]
