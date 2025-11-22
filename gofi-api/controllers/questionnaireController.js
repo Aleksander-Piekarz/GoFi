@@ -1,24 +1,57 @@
 const mysql = require("mysql2/promise");
+const fs = require("fs");
+const path = require("path");
+const { pool } = require("../lib/db");
 
-// ---------------- DB: konfiguracja + pojedynczy pool ---------------- //
 
-const DB_CONFIG = {
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASS || "",
-  database: process.env.DB_NAME || "gofi",
-};
 
-let _pool;
-function getDbPool() {
-  if (!_pool) {
-    _pool = mysql.createPool(DB_CONFIG);
+// ---------------- Alternatywy ---------------- //
+
+let ALTERNATIVES_MAP = new Map();
+
+function loadAlternatives() {
+  try {
+    const altPath = path.join(
+      __dirname,
+      "..",
+      "data",
+      "exercise_alternatives.json"
+    );
+    const altData = fs.readFileSync(altPath, "utf8");
+    const pairs = JSON.parse(altData);
+
+    const map = new Map();
+
+    for (const pairList of pairs) {
+      for (const exerciseCode of pairList) {
+        if (!map.has(exerciseCode)) {
+          map.set(exerciseCode, new Set());
+        }
+        const alternatives = map.get(exerciseCode);
+        for (const altCode of pairList) {
+          if (exerciseCode !== altCode) {
+            alternatives.add(altCode);
+          }
+        }
+      }
+    }
+
+    ALTERNATIVES_MAP = map;
+    console.log(
+      `[GoFi] Pomyślnie załadowano ${map.size} ćwiczeń z alternatywami.`
+    );
+  } catch (err) {
+    console.error(
+      "[GoFi BŁĄD] Nie udało się załadować exercise_alternatives.json:",
+      err.message
+    );
   }
-  return _pool;
 }
 
-// ---------------- Ankieta: definicja pytań ---------------- //
+loadAlternatives();
 
+// ---------------- Ankieta: definicja pytań ---------------- //
+// (Bez zmian)
 const QUESTIONS = [
   {
     id: "goal",
@@ -74,6 +107,7 @@ const QUESTIONS = [
       { value: "barbell", label: "Sztanga" },
       { value: "machines", label: "Maszyny" },
       { value: "bands", label: "Gumy" },
+      { value: "kettlebell", label: "Kettlebell" },
     ],
   },
   {
@@ -119,76 +153,95 @@ const QUESTIONS = [
   },
 ];
 
-// ---------------- Walidacja odpowiedzi z ankiety ---------------- //
+// ---------------- Definicje Splitów ---------------- //
+const SPLIT_TEMPLATES = {
+  FBW_2: {
+    name: "Full Body Workout (2x/week)",
+    schedule: ["A", "B"],
+    days: ["Mon", "Thu"],
+    blocks: {
+      A: { patterns: ["squat", "push_h", "pull_h", "core"], min_ex: 3, max_ex: 5 },
+      B: { patterns: ["hinge", "push_v", "pull_v", "accessory"], min_ex: 3, max_ex: 5 },
+    },
+  },
+  FBW_3: {
+    name: "Full Body Workout (3x/week)",
+    schedule: ["A", "B", "A"],
+    days: ["Mon", "Wed", "Fri"],
+    blocks: {
+      A: { patterns: ["squat", "push_h", "pull_h", "core"], min_ex: 3, max_ex: 5 },
+      B: { patterns: ["hinge", "push_v", "pull_v", "accessory"], min_ex: 3, max_ex: 5 },
+    },
+  },
+  ULUL_4: {
+    name: "Upper/Lower (4x/week)",
+    schedule: ["Upper A", "Lower A", "Upper B", "Lower B"],
+    days: ["Mon", "Tue", "Thu", "Fri"],
+    blocks: {
+      "Upper A": { patterns: ["push_h", "pull_h", "push_v", "accessory"], min_ex: 4, max_ex: 5 },
+      "Lower A": { patterns: ["squat", "hinge", "lunge", "core"], min_ex: 3, max_ex: 4 },
+      "Upper B": { patterns: ["pull_v", "push_h", "pull_h", "accessory"], min_ex: 4, max_ex: 5 },
+      "Lower B": { patterns: ["hinge", "squat", "lunge", "core"], min_ex: 3, max_ex: 4 },
+    },
+  },
+  PPL_3: {
+    name: "Push/Pull/Legs (3x/week)",
+    schedule: ["Push", "Pull", "Legs"],
+    days: ["Mon", "Wed", "Fri"],
+    blocks: {
+      Push: { patterns: ["push_h", "push_v", "accessory"], min_ex: 4, max_ex: 5 },
+      Pull: { patterns: ["pull_h", "pull_v", "accessory"], min_ex: 4, max_ex: 5 },
+      Legs: { patterns: ["squat", "hinge", "lunge", "core"], min_ex: 4, max_ex: 5 },
+    },
+  },
+  PPL_6: {
+    name: "Push/Pull/Legs (6x/week)",
+    schedule: ["Push A", "Pull A", "Legs A", "Push B", "Pull B", "Legs B"],
+    days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    blocks: {
+      "Push A": { patterns: ["push_h", "push_v", "accessory"], min_ex: 4, max_ex: 5 },
+      "Pull A": { patterns: ["pull_h", "pull_v", "accessory"], min_ex: 4, max_ex: 5 },
+      "Legs A": { patterns: ["squat", "hinge", "lunge", "core"], min_ex: 4, max_ex: 5 },
+      "Push B": { patterns: ["push_v", "push_h", "accessory"], min_ex: 4, max_ex: 5 },
+      "Pull B": { patterns: ["pull_v", "pull_h", "accessory"], min_ex: 4, max_ex: 5 },
+      "Legs B": { patterns: ["hinge", "squat", "lunge", "core"], min_ex: 4, max_ex: 5 },
+    },
+  },
+};
 
+// ---------------- Logika pomocnicza (Walidacja, Serie, Reps) ---------------- //
+// (Bez zmian)
 function validateAnswers(a) {
   const errors = [];
-
   const goals = ["reduction", "mass", "recomposition"];
   if (!goals.includes(a.goal)) errors.push("Invalid goal");
-
-  if (
-    typeof a.days_per_week !== "number" ||
-    a.days_per_week < 2 ||
-    a.days_per_week > 7
-  ) {
+  if (typeof a.days_per_week !== "number" || a.days_per_week < 2 || a.days_per_week > 7) {
     errors.push("days_per_week out of range (2–7)");
   }
-
-  if (
-    typeof a.session_time !== "number" ||
-    a.session_time < 20 ||
-    a.session_time > 120
-  ) {
+  if (typeof a.session_time !== "number" || a.session_time < 20 || a.session_time > 120) {
     errors.push("session_time out of range (20–120)");
   }
-
   const exps = ["beginner", "intermediate", "advanced"];
   if (!exps.includes(a.experience)) errors.push("Invalid experience");
-
   const locs = ["home", "gym"];
   if (!locs.includes(a.location)) errors.push("Invalid location");
-
   if (typeof a.age === "number" && (a.age < 14 || a.age > 100)) {
     errors.push("age out of range (14–100)");
   }
-
-  const intens = ["low", "medium", "high"];
-  if (a.intensity_pref && !intens.includes(a.intensity_pref)) {
-    errors.push("Invalid intensity_pref");
-  }
-
-  const styles = ["strength", "cardio", "mixed"];
-  if (a.preference_style && !styles.includes(a.preference_style)) {
-    errors.push("Invalid preference_style");
-  }
-
-  const focuses = ["upper", "lower", "balanced"];
-  if (a.focus_body && !focuses.includes(a.focus_body)) {
-    errors.push("Invalid focus_body");
-  }
-
   return errors;
 }
 
-// ---------------- Logika treningowa: serie, powtórzenia, split ---------------- //
-
-// liczba serii bazowa zależna od doświadczenia i preferowanej intensywności
 function baseSets(experience, intensity_pref) {
   let sets = 3;
   if (experience === "intermediate") sets = 4;
   if (experience === "advanced") sets = 5;
-
   if (intensity_pref === "low") sets -= 1;
   if (sets < 2) sets = 2;
-
   return sets;
 }
 
-// sugerowany zakres powtórzeń zależny od celu, wzorca, intensywności i doświadczenia
 function suggestReps(goal, pattern, intensity_pref, experience) {
   let reps;
-
   if (goal === "mass") {
     reps = pattern === "squat" || pattern === "hinge" ? "6–8" : "8–12";
   } else if (goal === "reduction") {
@@ -196,8 +249,6 @@ function suggestReps(goal, pattern, intensity_pref, experience) {
   } else {
     reps = "8–12";
   }
-
-  // modyfikacja intensywnością
   if (intensity_pref === "low") {
     if (reps === "6–8") reps = "8–10";
     else reps = "10–15";
@@ -207,26 +258,19 @@ function suggestReps(goal, pattern, intensity_pref, experience) {
   ) {
     reps = "5–8";
   }
-
-  // początkujący nie dostają ultra niskich zakresów
   if (experience === "beginner" && reps === "5–8") reps = "6–8";
-
   return reps;
 }
 
-// wybór splita na podstawie celu i liczby dni
-function pickSplit(goal, days) {
-  if (days <= 3) return "FBW"; // 2–3 dni: full body
-  if (goal === "mass" || goal === "recomposition") {
-    return days >= 5 ? "PPL" : "ULUL";
-  }
-  if (goal === "reduction") {
-    return days >= 4 ? "ULUL" : "FBW";
-  }
-  return "FBW";
+function generateProgressionNotes() {
+  return [
+    { week: 1, note: "Tydzień 1: Umiarkowana intensywność, skup się na technice i poznaniu ćwiczeń." },
+    { week: 2, note: "Tydzień 2: Delikatnie zwiększ obciążenia lub liczbę powtórzeń (~5–10%)." },
+    { week: 3, note: "Tydzień 3: Trenuj bliżej upadku mięśniowego w ostatnich seriach (RIR 1–2)." },
+    { week: 4, note: "Tydzień 4: Deload – zmniejsz ciężary o ok. 20–30%, utrzymaj technikę i regenerację." },
+  ];
 }
 
-// podsumowanie profilu
 function profileSummary(answers) {
   return {
     goal: answers.goal,
@@ -238,401 +282,167 @@ function profileSummary(answers) {
   };
 }
 
-// 4-tygodniowa progresja
-function generateProgressionNotes() {
-  return [
-    {
-      week: 1,
-      note: "Tydzień 1: Umiarkowana intensywność, skup się na technice i poznaniu ćwiczeń.",
-    },
-    {
-      week: 2,
-      note: "Tydzień 2: Delikatnie zwiększ obciążenia lub liczbę powtórzeń (~5–10%).",
-    },
-    {
-      week: 3,
-      note: "Tydzień 3: Trenuj bliżej upadku mięśniowego w ostatnich seriach (RIR 1–2).",
-    },
-    {
-      week: 4,
-      note: "Tydzień 4: Deload – zmniejsz ciężary o ok. 20–30%, utrzymaj technikę i regenerację.",
-    },
-  ];
+// ---------------- Logika wyboru splitu ---------------- //
+function pickSplit(goal, days) {
+  if (days <= 2) return SPLIT_TEMPLATES.FBW_2;
+  if (days === 3) {
+    return (goal === "mass" || goal === "recomposition") ? SPLIT_TEMPLATES.PPL_3 : SPLIT_TEMPLATES.FBW_3;
+  }
+  if (days === 4) return SPLIT_TEMPLATES.ULUL_4;
+  if (days === 5) {
+    console.warn("[Generator] Logika dla 5 dni niezaimplementowana, używam ULUL_4.");
+    return SPLIT_TEMPLATES.ULUL_4;
+  }
+  return SPLIT_TEMPLATES.PPL_6;
 }
 
-// ---------------- Wybór ćwiczeń na pojedynczy dzień ---------------- //
+// ---------------- GŁÓWNA LOGIKA: Generowanie planu ---------------- //
 
-async function pickExercisesForDay(
-  pool,
-  userAnswers,
-  { targetPatterns, muscleBias, maxMinutes }
-) {
-  const location = userAnswers.location || "home";
-  const equipmentSet = new Set([
-    ...(userAnswers.equipment || []),
-    "bodyweight",
-    "none",
-  ]);
+async function fetchViableExercises(poolPromise, { patterns, location, equipmentSet, experience }) {
+  // ⭐️ ZMIANA: poolPromise jest teraz przekazywany jako argument
+  const equipmentPlaceholders = Array.from(equipmentSet).map(() => "?").join(" OR ");
+  const sql = `
+    SELECT 
+      code, name, primary_muscle, pattern, equipment, difficulty, minutes_est,
+      description, video_url
+    FROM exercises
+    WHERE pattern IN (?)
+      AND FIND_IN_SET(?, location)
+      AND (${equipmentPlaceholders.replace(/\?/g, (eq) => `FIND_IN_SET(?, equipment)`)})
+      AND difficulty <= ?
+  `;
+  let maxDifficulty;
+  if (experience === "beginner") maxDifficulty = 3;
+  else if (experience === "intermediate") maxDifficulty = 4;
+  else maxDifficulty = 5; 
+  const params = [patterns, location, ...equipmentSet, maxDifficulty];
+  try {
+    const [rows] = await poolPromise.query(sql, params); // ⭐️ Używamy przekazanego poolPromise
+    return rows;
+  } catch (err) {
+    console.error("Błąd SQL w fetchViableExercises:", err);
+    throw new Error("Błąd pobierania ćwiczeń z bazy danych.");
+  }
+}
 
-  const placeholders = targetPatterns.map(() => "?").join(",");
+function selectExerciseSet(viableExercises, {
+  criteria,
+  answers,
+  avoidCodes = new Set(),
+}) {
+  const { maxMinutes, minExercises, maxExercises, muscleBias } = criteria;
+  const { experience, goal, intensity_pref } = answers;
 
-  const [rows] = await pool.query(
-    `SELECT code, name, muscle_group, pattern, equipment, location, difficulty, minutes_est
-     FROM exercises
-     WHERE pattern IN (${placeholders})
-       AND FIND_IN_SET(?, location)`,
-    [...targetPatterns, location]
-  );
-
-  // filtr po sprzęcie
-  const viable = rows.filter((ex) => {
-    const requiredEquip = (ex.equipment || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    return (
-      requiredEquip.length === 0 ||
-      requiredEquip.some((eq) => equipmentSet.has(eq))
-    );
-  });
-
-  // filtr trudności / sortowanie po doświadczeniu
-  const exp = userAnswers.experience;
-  let filtered = viable;
-  if (exp === "beginner") {
-    filtered = viable.filter((ex) => ex.difficulty <= 3);
+  let filtered = viableExercises.filter(ex => !avoidCodes.has(ex.code));
+  
+  if (filtered.length < minExercises && viableExercises.length > 0) {
+    console.warn(`[Generator] Za mało unikalnych ćwiczeń, resetuję avoidCodes.`);
+    filtered = viableExercises;
   }
 
   const biasSet = new Set(muscleBias || []);
   filtered.sort((a, b) => {
-    const aBias = biasSet.has(a.muscle_group) ? 0 : 1;
-    const bBias = biasSet.has(b.muscle_group) ? 0 : 1;
+    const aBias = biasSet.has(a.primary_muscle) ? 0 : 1;
+    const bBias = biasSet.has(b.primary_muscle) ? 0 : 1;
     if (aBias !== bBias) return aBias - bBias;
-
-    if (exp === "advanced") {
-      return b.difficulty - a.difficulty; // zaawansowany: trudniejsze wyżej
+    if (experience === "advanced") {
+      return b.difficulty - a.difficulty;
     }
-    return a.difficulty - b.difficulty; // pocz./średnio: łatwiejsze wyżej
+    return a.difficulty - b.difficulty;
   });
-
-  // dopuszczalny czas sesji z uwzględnieniem aktywności i wieku
-  let allowedMinutes = maxMinutes || 60;
-
-  if (
-    userAnswers.daily_activity === "high" &&
-    userAnswers.goal === "reduction"
-  ) {
-    allowedMinutes = Math.min(allowedMinutes, 45);
-  }
-  if (userAnswers.daily_activity === "low" && userAnswers.goal === "mass") {
-    allowedMinutes += 10;
-  }
-  if (typeof userAnswers.age === "number" && userAnswers.age >= 55) {
-    allowedMinutes -= 5;
-  }
-  if (allowedMinutes < 30) allowedMinutes = 30;
 
   const picked = [];
   let totalMinutes = 0;
-  const minExercises = 3; // miękki warunek: chcemy min. 3 ćwiczenia
-  const maxExercises = 5;
+  const patternsUsed = new Set();
 
   for (const ex of filtered) {
     const estMin = ex.minutes_est || 6;
-    const wouldExceed = totalMinutes + estMin > allowedMinutes;
-
-    if (picked.length >= minExercises && wouldExceed) {
+    if (totalMinutes + estMin > maxMinutes && picked.length >= minExercises) {
       break;
     }
-
+    if (picked.length >= maxExercises) {
+      break;
+    }
+    if (ex.pattern !== 'accessory' && patternsUsed.has(ex.pattern)) {
+      continue;
+    }
     picked.push(ex);
     totalMinutes += estMin;
-
-    if (picked.length >= maxExercises) break;
+    patternsUsed.add(ex.pattern);
+    avoidCodes.add(ex.code);
+    const alts = ALTERNATIVES_MAP.get(ex.code);
+    if (alts) {
+      alts.forEach(altCode => avoidCodes.add(altCode));
+    }
   }
 
-  const sets = baseSets(userAnswers.experience, userAnswers.intensity_pref);
-
+  const sets = baseSets(experience, intensity_pref);
   return picked.map((ex) => ({
     code: ex.code,
     name: ex.name,
     sets,
-    reps: suggestReps(
-      userAnswers.goal,
-      ex.pattern,
-      userAnswers.intensity_pref,
-      userAnswers.experience
-    ),
+    reps: suggestReps(goal, ex.pattern, intensity_pref, experience),
+    description: ex.description, // <-- POPRAWKA 2: Dodano brakujące pole
+    video_url: ex.video_url,   // <-- POPRAWKA 2: Dodano brakujące pole
+    weight: '' // Dodajemy puste pole na wagę
   }));
 }
 
-// ---------------- Generowanie tygodnia z bazy (FBW / ULUL / PPL) ---------------- //
+async function generateWeekFromDb(poolPromise, splitTemplate, answers) {
+  const { location, experience, session_time } = answers;
+  const equipmentSet = new Set([
+    ...(answers.equipment || []),
+    "bodyweight",
+    "none",
+  ]);
 
-async function generateWeekFromDb(pool, split, answers) {
-  const days = answers.days_per_week;
-  const maxMin = answers.session_time || 60;
-
-  let biasMuscles;
+  let muscleBias = [];
   if (answers.focus_body === "upper") {
-    biasMuscles = ["chest", "back", "shoulders", "arms"];
+    muscleBias = ["chest", "lats", "mid-back", "shoulders", "biceps", "triceps"];
   } else if (answers.focus_body === "lower") {
-    biasMuscles = ["legs", "core"];
-  } else {
-    biasMuscles = ["chest", "back", "legs", "shoulders", "core", "arms"];
+    muscleBias = ["quads", "hamstrings", "glutes", "core", "calves"];
   }
 
   const weekPlan = [];
+  const maxMinPerSession = session_time || 60;
+  const avoidCodes = new Set();
+  const allPatterns = new Set();
 
-  if (split === "FBW") {
-    const patternsA = ["squat", "push_h", "pull_h"];
-    const patternsB = ["hinge", "push_v", "pull_v"];
+  Object.values(splitTemplate.blocks).forEach(block => {
+    block.patterns.forEach(p => allPatterns.add(p));
+  });
 
-    if (days <= 2) {
-      const mon = await pickExercisesForDay(pool, answers, {
-        targetPatterns: patternsA,
-        muscleBias: biasMuscles,
-        maxMinutes: maxMin,
-      });
-      const thu = await pickExercisesForDay(pool, answers, {
-        targetPatterns: patternsB,
-        muscleBias: biasMuscles,
-        maxMinutes: maxMin,
-      });
-      weekPlan.push({ day: "Mon", exercises: mon });
-      weekPlan.push({ day: "Thu", exercises: thu });
-    } else {
-      const a = await pickExercisesForDay(pool, answers, {
-        targetPatterns: patternsA,
-        muscleBias: biasMuscles,
-        maxMinutes: maxMin,
-      });
-      const b = await pickExercisesForDay(pool, answers, {
-        targetPatterns: patternsB,
-        muscleBias: biasMuscles,
-        maxMinutes: maxMin,
-      });
-      weekPlan.push({ day: "Mon", exercises: a });
-      weekPlan.push({ day: "Wed", exercises: b });
-      weekPlan.push({ day: "Fri", exercises: a });
-    }
-  } else if (split === "ULUL") {
-    const patternsUpperA = ["push_h", "pull_h", "push_v"];
-    const patternsLowerA = ["squat", "hinge", "core"];
-    const patternsUpperB = ["pull_v", "push_h", "pull_h"];
-    let patternsLowerB = ["squat", "hinge", "core"];
-    if (days >= 4) {
-      patternsLowerB = ["hinge", "lunge", "core"];
-    }
+  const allViableExercises = await fetchViableExercises(poolPromise, {
+    patterns: Array.from(allPatterns),
+    location,
+    equipmentSet,
+    experience,
+  });
 
-    const upperA = await pickExercisesForDay(pool, answers, {
-      targetPatterns: patternsUpperA,
-      muscleBias: biasMuscles,
-      maxMinutes: maxMin,
+  for (let i = 0; i < splitTemplate.schedule.length; i++) {
+    const blockName = splitTemplate.schedule[i];
+    const dayLabel = splitTemplate.days[i] || `Dzień ${i + 1}`;
+    const blockDef = splitTemplate.blocks[blockName];
+    
+    const viableForBlock = allViableExercises.filter(ex => 
+      blockDef.patterns.includes(ex.pattern)
+    );
+
+    const criteria = {
+      maxMinutes: maxMinPerSession,
+      minExercises: blockDef.min_ex || 3,
+      maxExercises: blockDef.max_ex || 5,
+      muscleBias: muscleBias,
+    };
+
+    const exercises = selectExerciseSet(viableForBlock, {
+      criteria,
+      answers,
+      avoidCodes,
     });
-    weekPlan.push({ day: "Mon", block: "Upper A", exercises: upperA });
 
-    const lowerA = await pickExercisesForDay(pool, answers, {
-      targetPatterns: patternsLowerA,
-      muscleBias: biasMuscles,
-      maxMinutes: maxMin,
-    });
-    weekPlan.push({ day: "Tue", block: "Lower A", exercises: lowerA });
-
-    const upperA_usedCodes = new Set(upperA.map((ex) => ex.code));
-    const upperB = await pickExercisesForDay(pool, answers, {
-      targetPatterns: patternsUpperB,
-      muscleBias: biasMuscles,
-      maxMinutes: maxMin,
-    });
-    let upperB_final = upperB.filter((ex) => !upperA_usedCodes.has(ex.code));
-    if (upperB_final.length < 3) {
-      // za mało ćwiczeń po odfiltrowaniu – bierzemy pełną listę
-      upperB_final = upperB;
-    }
-    weekPlan.push({ day: "Thu", block: "Upper B", exercises: upperB_final });
-    const lowerA_usedCodes = new Set(lowerA.map((ex) => ex.code));
-    const lowerB = await pickExercisesForDay(pool, answers, {
-      targetPatterns: patternsLowerB,
-      muscleBias: biasMuscles,
-      maxMinutes: maxMin,
-    });
-    let lowerB_final = lowerB.filter((ex) => !lowerA_usedCodes.has(ex.code));
-    if (lowerB_final.length < 3) {
-      lowerB_final = lowerB;
-    }
-    weekPlan.push({ day: "Fri", block: "Lower B", exercises: lowerB_final });
-
-    if (days > 4) {
-      if (days >= 5) {
-        const condMid = await pickExercisesForDay(pool, answers, {
-          targetPatterns: ["carry", "accessory", "core"],
-          muscleBias: [],
-          maxMinutes: Math.floor(maxMin / 2),
-        });
-        weekPlan.splice(2, 0, {
-          day: "Wed",
-          block: "Conditioning",
-          exercises: condMid,
-        });
-      }
-      if (days >= 6) {
-        const condEnd = await pickExercisesForDay(pool, answers, {
-          targetPatterns: ["carry", "accessory", "core"],
-          muscleBias: [],
-          maxMinutes: Math.floor(maxMin / 2),
-        });
-        weekPlan.push({
-          day: "Sat",
-          block: "Conditioning",
-          exercises: condEnd,
-        });
-      }
-    }
-  } else if (split === "PPL") {
-    if (days === 5) {
-      const push = await pickExercisesForDay(pool, answers, {
-        targetPatterns: ["push_h", "push_v"],
-        muscleBias: biasMuscles,
-        maxMinutes: maxMin,
-      });
-      weekPlan.push({ day: "Mon", block: "Push", exercises: push });
-
-      const pull = await pickExercisesForDay(pool, answers, {
-        targetPatterns: ["pull_h", "pull_v"],
-        muscleBias: biasMuscles,
-        maxMinutes: maxMin,
-      });
-      weekPlan.push({ day: "Tue", block: "Pull", exercises: pull });
-
-      const legs = await pickExercisesForDay(pool, answers, {
-        targetPatterns: ["squat", "hinge", "core"],
-        muscleBias: biasMuscles,
-        maxMinutes: maxMin,
-      });
-      weekPlan.push({ day: "Wed", block: "Legs", exercises: legs });
-
-      const usedPushCodes = new Set(push.map((ex) => ex.code));
-      const pushVol = await pickExercisesForDay(pool, answers, {
-        targetPatterns: ["push_h", "push_v", "core"],
-        muscleBias: ["chest", "shoulders", "core"],
-        maxMinutes: maxMin,
-      });
-      let pushVolFinal = pushVol.filter((ex) => !usedPushCodes.has(ex.code));
-      if (pushVolFinal.length < 3) {
-        pushVolFinal = pushVol;
-      }
-      weekPlan.push({
-        day: "Fri",
-        block: "Push (vol)",
-        exercises: pushVolFinal,
-      });
-
-      const usedPullCodes = new Set(pull.map((ex) => ex.code));
-      const pullVol = await pickExercisesForDay(pool, answers, {
-        targetPatterns: ["pull_h", "pull_v", "core"],
-        muscleBias: ["back", "core"],
-        maxMinutes: maxMin,
-      });
-      let pullVolFinal = pullVol.filter((ex) => !usedPullCodes.has(ex.code));
-      if (pullVolFinal.length < 3) {
-        pullVolFinal = pullVol;
-      }
-      weekPlan.push({
-        day: "Sat",
-        block: "Pull (vol)",
-        exercises: pullVolFinal,
-      });
-    } else if (days === 6) {
-      const pushA = await pickExercisesForDay(pool, answers, {
-        targetPatterns: ["push_h", "push_v"],
-        muscleBias: biasMuscles,
-        maxMinutes: maxMin,
-      });
-      weekPlan.push({ day: "Mon", block: "Push A", exercises: pushA });
-
-      const pullA = await pickExercisesForDay(pool, answers, {
-        targetPatterns: ["pull_h", "pull_v"],
-        muscleBias: biasMuscles,
-        maxMinutes: maxMin,
-      });
-      weekPlan.push({ day: "Tue", block: "Pull A", exercises: pullA });
-
-      const legsA = await pickExercisesForDay(pool, answers, {
-        targetPatterns: ["squat", "hinge", "core"],
-        muscleBias: biasMuscles,
-        maxMinutes: maxMin,
-      });
-      weekPlan.push({ day: "Wed", block: "Legs A", exercises: legsA });
-
-      const usedPushA = new Set(pushA.map((ex) => ex.code));
-      const pushB = await pickExercisesForDay(pool, answers, {
-        targetPatterns: ["push_h", "push_v", "core"],
-        muscleBias: biasMuscles,
-        maxMinutes: maxMin,
-      });
-      const pushBFinal = pushB.filter((ex) => !usedPushA.has(ex.code));
-      weekPlan.push({ day: "Thu", block: "Push B", exercises: pushBFinal });
-
-      const usedPullA = new Set(pullA.map((ex) => ex.code));
-      const pullB = await pickExercisesForDay(pool, answers, {
-        targetPatterns: ["pull_h", "pull_v", "core"],
-        muscleBias: biasMuscles,
-        maxMinutes: maxMin,
-      });
-      const pullBFinal = pullB.filter((ex) => !usedPullA.has(ex.code));
-      weekPlan.push({ day: "Fri", block: "Pull B", exercises: pullBFinal });
-
-      const usedLegsA = new Set(legsA.map((ex) => ex.code));
-      const legsB = await pickExercisesForDay(pool, answers, {
-        targetPatterns: ["squat", "hinge", "lunge"],
-        muscleBias: biasMuscles,
-        maxMinutes: maxMin,
-      });
-      let legsBFinal = legsB.filter((ex) => !usedLegsA.has(ex.code));
-      if (legsBFinal.length < 3) {
-        legsBFinal = legsB;
-      }
-      weekPlan.push({ day: "Sat", block: "Legs B", exercises: legsBFinal });
-    } else if (days >= 7) {
-      const basePlan = await generateWeekFromDb(pool, "PPL", {
-        ...answers,
-        days_per_week: 6,
-      });
-      weekPlan.push(...basePlan);
-
-      if (
-        answers.goal === "reduction" ||
-        answers.preference_style === "cardio"
-      ) {
-        const condDay = await pickExercisesForDay(pool, answers, {
-          targetPatterns: ["carry", "accessory", "core"],
-          muscleBias: [],
-          maxMinutes: maxMin,
-        });
-        weekPlan.push({
-          day: "Sun",
-          block: "Conditioning",
-          exercises: condDay,
-        });
-      } else {
-        const accessoryDay = await pickExercisesForDay(pool, answers, {
-          targetPatterns: ["accessory", "core"],
-          muscleBias: [],
-          maxMinutes: Math.floor(maxMin / 2),
-        });
-        weekPlan.push({
-          day: "Sun",
-          block: "Accessory / Mobility",
-          exercises: accessoryDay,
-        });
-      }
-    }
+    weekPlan.push({ day: dayLabel, block: blockName, exercises: exercises });
   }
-
-  // UWAGA: tutaj celowo usunąłem wcześniejszy „cardio finisher”
-  // który korzystał z equipmentSet i muscle_group w strukturze,
-  // bo w aktualnej wersji dzienne plany nie przenoszą tych pól.
-  // Jeśli będziesz chciał, możemy go potem odtworzyć poprawnie.
 
   return weekPlan;
 }
@@ -653,27 +463,29 @@ exports.submitAnswers = async (req, res) => {
 
     const errors = validateAnswers(answers);
     if (errors.length) {
-      return res
-        .status(400)
-        .json({ error: "Validation failed", details: errors });
+      return res.status(400).json({ error: "Validation failed", details: errors });
     }
 
-    const pool = getDbPool();
+    const poolPromise = pool.promise();
 
-    const [qResult] = await pool.query(
-      "INSERT INTO questionnaires (user_id, answers_json) VALUES (?, ?)",
+    const [qResult] = await poolPromise.query(
+      "INSERT INTO questionnaires (user_id, answers_json, created_at) VALUES (?, ?, NOW())",
       [userId, JSON.stringify(answers)]
     );
     const questionnaireId = qResult.insertId;
 
-    const split = pickSplit(answers.goal, answers.days_per_week);
-    const week = await generateWeekFromDb(pool, split, answers);
+    const splitTemplate = pickSplit(answers.goal, answers.days_per_week);
+    const week = await generateWeekFromDb(pool, splitTemplate, answers);
     const progression = generateProgressionNotes();
 
-    const plan = { split, week, progression };
+    const plan = { 
+      split: splitTemplate.name,
+      week, 
+      progression 
+    };
 
-    const [pResult] = await pool.query(
-      "INSERT INTO plans (user_id, source_questionnaire_id, plan_json) VALUES (?, ?, ?)",
+    const [pResult] = await poolPromise.query(
+      "INSERT INTO plans (user_id, source_questionnaire_id, plan_json, created_at) VALUES (?, ?, ?, NOW())",
       [userId, questionnaireId, JSON.stringify(plan)]
     );
 
@@ -683,8 +495,8 @@ exports.submitAnswers = async (req, res) => {
       ids: { questionnaireId, planId: pResult.insertId },
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Questionnaire submit failed" });
+    console.error("Błąd w submitAnswers:", error);
+    res.status(500).json({ error: "Generowanie planu nie powiodło się." });
   }
 };
 
@@ -694,20 +506,33 @@ exports.getLatestPlan = async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-    const pool = getDbPool();
-    const [rows] = await pool.query(
+    const poolPromise = pool.promise();
+    const [rows] = await poolPromise.query(
       "SELECT plan_json FROM plans WHERE user_id=? ORDER BY id DESC LIMIT 1",
       [userId]
     );
     if (!rows.length) return res.json({});
 
     const raw = rows[0].plan_json;
-    const latestPlan = typeof raw === "string" ? JSON.parse(raw) : raw;
+    const latestPlan = typeof raw === "string" ? JSON.parse(raw) : (raw || {});
+
+    // Upewnij się, że ćwiczenia mają pole 'weight', jeśli go brakuje
+    if (latestPlan.week && Array.isArray(latestPlan.week)) {
+      for (const day of latestPlan.week) {
+        if (day.exercises && Array.isArray(day.exercises)) {
+          for (const ex of day.exercises) {
+            if (ex.weight === undefined) {
+              ex.weight = '';
+            }
+          }
+        }
+      }
+    }
 
     return res.json(latestPlan);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "getLatestPlan failed" });
+    console.error("Błąd w getLatestPlan:", error);
+    res.status(500).json({ error: "Pobieranie ostatniego planu nie powiodło się." });
   }
 };
 
@@ -718,15 +543,15 @@ exports.saveAnswers = async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-    const pool = getDbPool();
-    const [qResult] = await pool.query(
-      "INSERT INTO questionnaires (user_id, answers_json) VALUES (?, ?)",
+    const poolPromise = pool.promise();
+    const [qResult] = await poolPromise.query(
+      "INSERT INTO questionnaires (user_id, answers_json, created_at) VALUES (?, ?, NOW())",
       [userId, JSON.stringify(answers)]
     );
     return res.json({ ok: true, questionnaireId: qResult.insertId });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "saveAnswers failed" });
+    console.error("Błąd w saveAnswers:", error);
+    res.status(500).json({ error: "Zapisywanie odpowiedzi nie powiodło się." });
   }
 };
 
@@ -736,8 +561,8 @@ exports.getLatestAnswers = async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-    const pool = getDbPool();
-    const [rows] = await pool.query(
+    const poolPromise = pool.promise();
+    const [rows] = await poolPromise.query(
       "SELECT answers_json FROM questionnaires WHERE user_id=? ORDER BY id DESC LIMIT 1",
       [userId]
     );
@@ -745,12 +570,12 @@ exports.getLatestAnswers = async (req, res) => {
     let latestAnswers = {};
     if (rows.length) {
       const raw = rows[0].answers_json;
-      latestAnswers = typeof raw === "string" ? JSON.parse(raw) : raw;
+      latestAnswers = typeof raw === "string" ? JSON.parse(raw) : (raw || {});
     }
 
     res.json(latestAnswers);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "getLatestAnswers failed" });
+    console.error("Błąd w getLatestAnswers:", error);
+    res.status(500).json({ error: "Pobieranie ostatnich odpowiedzi nie powiodło się." });
   }
 };

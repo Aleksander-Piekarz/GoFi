@@ -1,11 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api_client.dart';
-import 'providers.dart';
-
-final questionnaireServiceProvider = Provider<QuestionnaireService>((ref) {
-  final api = ref.read(apiClientProvider);
-  return QuestionnaireService(api);
-});
 
 class QuestionnaireService {
   QuestionnaireService(this._api);

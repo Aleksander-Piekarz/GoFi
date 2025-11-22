@@ -26,7 +26,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       final auth = ref.read(authServiceProvider);
 
-      // nowy AuthService zwraca tylko user (Map<String, dynamic>?)
+      
       final user = await auth.login(
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -37,7 +37,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/'); // przejście dalej
+      Navigator.pushReplacementNamed(context, '/'); 
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());

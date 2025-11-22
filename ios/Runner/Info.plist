@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSMotionUsageDescription</key>
+	<string>Aplikacja GoFi potrzebuje dostępu do Twojej aktywności ruchowej, aby móc liczyć Twoje kroki i wyświetlać je na ekranie głównym.</string>
 </dict>
 </plist>

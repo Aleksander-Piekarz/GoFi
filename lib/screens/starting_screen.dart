@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../services/api/providers.dart'; // <-- mini-token + storage + api/auth service
+import '../services/api/providers.dart'; 
 import 'home_screen.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
@@ -28,14 +28,14 @@ Future<void> _bootstrap() async {
 
   if (!mounted) return;
 
-  // BEZ automatycznego skoku do logina
+  
   if (tok != null && tok.isNotEmpty) {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const HomeScreen()), // lub MainScreen()
+      MaterialPageRoute(builder: (_) => const HomeScreen()), 
     );
   }
-  // Jeśli tokena nie ma — po prostu zostajemy na StartingScreen (UI poniżej)
+  
 }
 
   @override
@@ -49,7 +49,7 @@ Future<void> _bootstrap() async {
               fit: BoxFit.cover,
             ),
           ),
-          // półprzezroczysta warstwa pod przyciskami (opcjonalnie)
+          
           Positioned.fill(child: Container(color: Colors.black.withOpacity(0.15))),
           Column(
             children: [
@@ -105,7 +105,7 @@ Future<void> _bootstrap() async {
                           elevation: 3,
                         ),
                         onPressed: () {
-                          // TODO: Google Sign-In (opcjonalnie)
+                          
                         },
                         child: const Text(
                           "Sign Up with Google",

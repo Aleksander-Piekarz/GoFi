@@ -11,10 +11,16 @@ class UserService {
   UserService(this._api);
   final ApiClient _api;
 
-  Future<void> updateSettings({String? unitSystem, bool? notifEnabled}) async {
+
+  Future<void> updateSettings({
+    String? unitSystem, 
+    bool? notifEnabled,
+    int? dailySteps, 
+  }) async {
     await _api.put('/users/me/settings', body: {
       if (unitSystem != null) 'unitSystem': unitSystem,
       if (notifEnabled != null) 'notifEnabled': notifEnabled,
+      if (dailySteps != null) 'dailySteps': dailySteps, 
     });
   }
 

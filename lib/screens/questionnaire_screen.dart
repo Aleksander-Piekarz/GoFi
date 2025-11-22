@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/api/questionnaire_service.dart';
-import 'plan_screen.dart';
+import '../services/api/providers.dart';
+
+
+import 'home_screen.dart';
 
 class QuestionnaireScreen extends ConsumerStatefulWidget {
   const QuestionnaireScreen({super.key});
@@ -25,10 +27,10 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
     try {
       final svc = ref.read(questionnaireServiceProvider);
       final qs = await svc.getQuestions();
-      final latest = await svc.getLatestAnswers(); // <-- PREFILL
+      final latest = await svc.getLatestAnswers();
       setState(() {
         _questions = qs;
-        _answers.addAll(latest); // wstępne odpowiedzi
+        _answers.addAll(latest);
         _loading = false;
       });
     } catch (e) {
@@ -74,7 +76,7 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
                   selected: current == value,
                   onSelected: (_) => setState(() {
                     _answers[id] = value;
-                    if (id == 'location') _answers.remove('equipment'); // czyszczenie zależnych
+                    if (id == 'location') _answers.remove('equipment');
                   }),
                 );
               }).toList(),
@@ -138,10 +140,11 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
     }
   }
 
-  Future<void> _save() async {
+  
+  Future<void> _submitAndNavigate() async {
     setState(() => _saving = true);
     try {
-      // prosta walidacja: wymagamy odpowiedzi dla widocznych pytań
+      
       for (final raw in _questions) {
         final q = raw as Map;
         if (!_shouldShow(q)) continue;
@@ -152,11 +155,21 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
           throw 'Uzupełnij: ${q['label'] ?? id}';
         }
       }
+
+      
       final svc = ref.read(questionnaireServiceProvider);
-      await svc.saveAnswers(_answers);
+      await svc.submitAndGetPlan(_answers);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Zapisano odpowiedzi')));
-      Navigator.pop(context);
+
+      
+      ref.invalidate(planProvider);
+
+      
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
+      );
+
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Błąd: $e')));
@@ -164,36 +177,6 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
       if (mounted) setState(() => _saving = false);
     }
   }
-
-  Future<void> _saveAndGenerate() async {
-  setState(() => _saving = true);
-  try {
-    // 1) walidacja jak w _save()
-    for (final raw in _questions) {
-      final q = raw as Map;
-      if (!_shouldShow(q)) continue;
-      final id = q['id'];
-      final optional = (q['optional'] ?? false) as bool;
-      final v = _answers[id];
-      if (!optional && (v == null || (v is List && v.isEmpty))) {
-        throw 'Uzupełnij: ${q['label'] ?? id}';
-      }
-    }
-
-    final svc = ref.read(questionnaireServiceProvider);
-    final result = await svc.submitAndGetPlan(_answers);
-    if (!mounted) return;
-
-    // przejście do PlanScreen z wynikiem
-    Navigator.push(context,
-      MaterialPageRoute(builder: (_) => PlanScreen(plan: result['plan'] as Map<String, dynamic>)));
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Błąd: $e')));
-  } finally {
-    if (mounted) setState(() => _saving = false);
-  }
-}
 
 
   @override
@@ -215,27 +198,17 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
           },
         ),
       ),
-bottomNavigationBar: SafeArea(
-  minimum: const EdgeInsets.all(16),
-  child: Row(
-    children: [
-      Expanded(
-        child: OutlinedButton(
-          onPressed: _saving ? null : _save,
-          child: Text(_saving ? 'Zapisywanie…' : 'Zapisz'),
-        ),
-      ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: FilledButton(
-          onPressed: _saving ? null : _saveAndGenerate,
-          child: Text(_saving ? 'Generowanie…' : 'Zapisz + Plan'),
-        ),
-      ),
-    ],
-  ),
-),
       
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: FilledButton(
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          onPressed: _saving ? null : _submitAndNavigate,
+          child: Text(_saving ? 'Generowanie planu…' : 'Zapisz i Generuj Plan'),
+        ),
+      ),
     );
   }
 }
