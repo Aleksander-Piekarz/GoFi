@@ -3,8 +3,6 @@ const fs = require("fs");
 const path = require("path");
 const { pool } = require("../lib/db");
 
-
-
 // ---------------- Alternatywy ---------------- //
 
 let ALTERNATIVES_MAP = new Map();
@@ -51,7 +49,6 @@ function loadAlternatives() {
 loadAlternatives();
 
 // ---------------- Ankieta: definicja pytań ---------------- //
-// (Bez zmian)
 const QUESTIONS = [
   {
     id: "goal",
@@ -71,6 +68,18 @@ const QUESTIONS = [
       { value: "beginner", label: "Początkujący" },
       { value: "intermediate", label: "Średnio-zaawansowany" },
       { value: "advanced", label: "Zaawansowany" },
+    ],
+  },
+  // --- Pytanie o kontuzje (Kluczowe dla algorytmu wykluczeń) ---
+  {
+    id: "injuries",
+    type: "multi",
+    label: "Czy posiadasz kontuzje lub bóle?",
+    options: [
+      { value: "none", label: "Brak" },
+      { value: "knees", label: "Kolana (unikanie przeciążeń nóg)" },
+      { value: "shoulders", label: "Barki (unikanie wyciskania nad głowę)" },
+      { value: "lower_back", label: "Dolny odcinek pleców (unikanie martwych ciągów)" },
     ],
   },
   {
@@ -209,8 +218,8 @@ const SPLIT_TEMPLATES = {
   },
 };
 
-// ---------------- Logika pomocnicza (Walidacja, Serie, Reps) ---------------- //
-// (Bez zmian)
+// ---------------- Logika pomocnicza ---------------- //
+
 function validateAnswers(a) {
   const errors = [];
   const goals = ["reduction", "mass", "recomposition"];
@@ -225,6 +234,12 @@ function validateAnswers(a) {
   if (!exps.includes(a.experience)) errors.push("Invalid experience");
   const locs = ["home", "gym"];
   if (!locs.includes(a.location)) errors.push("Invalid location");
+  
+  // Walidacja pola injuries (może być undefined, ale jak jest, musi być tablicą)
+  if (a.injuries && !Array.isArray(a.injuries)) {
+    errors.push("Injuries must be an array");
+  }
+
   if (typeof a.age === "number" && (a.age < 14 || a.age > 100)) {
     errors.push("age out of range (14–100)");
   }
@@ -265,9 +280,9 @@ function suggestReps(goal, pattern, intensity_pref, experience) {
 function generateProgressionNotes() {
   return [
     { week: 1, note: "Tydzień 1: Umiarkowana intensywność, skup się na technice i poznaniu ćwiczeń." },
-    { week: 2, note: "Tydzień 2: Delikatnie zwiększ obciążenia lub liczbę powtórzeń (~5–10%)." },
-    { week: 3, note: "Tydzień 3: Trenuj bliżej upadku mięśniowego w ostatnich seriach (RIR 1–2)." },
-    { week: 4, note: "Tydzień 4: Deload – zmniejsz ciężary o ok. 20–30%, utrzymaj technikę i regenerację." },
+    { week: 2, note: "Tydzień 2: Zwiększ ciężar o ok. 2.5-5% w głównych bojach jeśli technika była dobra." },
+    { week: 3, note: "Tydzień 3: Trenuj bliżej upadku mięśniowego w ostatnich seriach (RIR 1-2)." },
+    { week: 4, note: "Tydzień 4: Deload – zmniejsz objętość o połowę, aby zregenerować układ nerwowy." },
   ];
 }
 
@@ -279,27 +294,45 @@ function profileSummary(answers) {
     session: answers.session_time,
     location: answers.location,
     equipment: answers.equipment || [],
+    injuries: answers.injuries || [],
   };
 }
 
-// ---------------- Logika wyboru splitu ---------------- //
 function pickSplit(goal, days) {
   if (days <= 2) return SPLIT_TEMPLATES.FBW_2;
   if (days === 3) {
     return (goal === "mass" || goal === "recomposition") ? SPLIT_TEMPLATES.PPL_3 : SPLIT_TEMPLATES.FBW_3;
   }
   if (days === 4) return SPLIT_TEMPLATES.ULUL_4;
-  if (days === 5) {
-    console.warn("[Generator] Logika dla 5 dni niezaimplementowana, używam ULUL_4.");
-    return SPLIT_TEMPLATES.ULUL_4;
-  }
+  if (days === 5) return SPLIT_TEMPLATES.ULUL_4; 
   return SPLIT_TEMPLATES.PPL_6;
 }
 
-// ---------------- GŁÓWNA LOGIKA: Generowanie planu ---------------- //
+// --- NOWOŚĆ: Helper do pobierania maxów użytkownika ---
+async function getUserMaxWeights(poolPromise, userId) {
+  try {
+    // Pobieramy maksymalny ciężar jaki użytkownik kiedykolwiek podniósł w danym ćwiczeniu
+    const [rows] = await poolPromise.query(`
+      SELECT exercise_code, MAX(weight) as max_weight
+      FROM workout_log_sets
+      WHERE user_id = ?
+      GROUP BY exercise_code
+    `, [userId]);
+    
+    const historyMap = {};
+    rows.forEach(row => {
+      historyMap[row.exercise_code] = row.max_weight;
+    });
+    return historyMap;
+  } catch (e) {
+    console.error("Błąd pobierania historii wag:", e);
+    return {};
+  }
+}
+
+// ---------------- GŁÓWNA LOGIKA ---------------- //
 
 async function fetchViableExercises(poolPromise, { patterns, location, equipmentSet, experience }) {
-  // ⭐️ ZMIANA: poolPromise jest teraz przekazywany jako argument
   const equipmentPlaceholders = Array.from(equipmentSet).map(() => "?").join(" OR ");
   const sql = `
     SELECT 
@@ -317,7 +350,7 @@ async function fetchViableExercises(poolPromise, { patterns, location, equipment
   else maxDifficulty = 5; 
   const params = [patterns, location, ...equipmentSet, maxDifficulty];
   try {
-    const [rows] = await poolPromise.query(sql, params); // ⭐️ Używamy przekazanego poolPromise
+    const [rows] = await poolPromise.query(sql, params);
     return rows;
   } catch (err) {
     console.error("Błąd SQL w fetchViableExercises:", err);
@@ -329,15 +362,49 @@ function selectExerciseSet(viableExercises, {
   criteria,
   answers,
   avoidCodes = new Set(),
+  historyMap = {} // --- NOWOŚĆ: Przekazujemy historię
 }) {
   const { maxMinutes, minExercises, maxExercises, muscleBias } = criteria;
-  const { experience, goal, intensity_pref } = answers;
+  const { experience, goal, intensity_pref, injuries } = answers;
 
   let filtered = viableExercises.filter(ex => !avoidCodes.has(ex.code));
-  
+
+  // --- NOWOŚĆ: ALGORYTM FILTROWANIA KONTUZJI ---
+  if (injuries && Array.isArray(injuries) && !injuries.includes('none')) {
+    filtered = filtered.filter(ex => {
+      // 1. Kontuzja Barków: Unikamy wyciskania nad głowę (push_v) i ćwiczeń mocno angażujących barki jako primary
+      if (injuries.includes('shoulders')) {
+        if (ex.pattern === 'push_v') return false; 
+        if (ex.primary_muscle === 'shoulders' && ex.difficulty > 2) return false; // Oszczędzamy trudne ćwiczenia na barki
+      }
+      // 2. Kontuzja Kolan: Unikamy ciężkich przysiadów i wykroków
+      if (injuries.includes('knees')) {
+        if (['squat', 'lunge'].includes(ex.pattern)) {
+          // Zostawiamy ewentualnie maszyny, które są stabilniejsze, wyrzucamy wolne ciężary
+          if (!ex.equipment.includes('machines') && !ex.equipment.includes('bodyweight')) return false;
+        }
+      }
+      // 3. Kontuzja Pleców: Unikamy Hinge (martwe ciągi) i wiosłowania w opadzie (duże siły ścinające)
+      if (injuries.includes('lower_back')) {
+        if (ex.pattern === 'hinge') return false;
+        if (ex.code === 'BENT_OVER_ROW_BB' || ex.code === 'PENDLAY_ROW') return false;
+      }
+      return true;
+    });
+  }
+
+  // Reset avoidCodes jeśli filtracja zbyt agresywna
   if (filtered.length < minExercises && viableExercises.length > 0) {
-    console.warn(`[Generator] Za mało unikalnych ćwiczeń, resetuję avoidCodes.`);
-    filtered = viableExercises;
+    console.warn(`[Generator] Za mało ćwiczeń po filtracji (kontuzje/unikalność). Resetuję avoidCodes.`);
+    // W przypadku kontuzji, lepiej zwrócić mniej ćwiczeń niż niebezpieczne, więc resetujemy tylko 'avoidCodes' a nie filtr kontuzji
+    // Tutaj uproszczenie: bierzemy z powrotem wszystko co pasuje do kontuzji
+    filtered = viableExercises.filter(ex => {
+       // (Powtórzona logika filtracji kontuzji - w produkcji warto wydzielić do funkcji)
+       if (injuries && injuries.includes('shoulders') && ex.pattern === 'push_v') return false;
+       if (injuries && injuries.includes('knees') && ['squat', 'lunge'].includes(ex.pattern) && !ex.equipment.includes('machines')) return false;
+       if (injuries && injuries.includes('lower_back') && ex.pattern === 'hinge') return false;
+       return true;
+    });
   }
 
   const biasSet = new Set(muscleBias || []);
@@ -345,9 +412,7 @@ function selectExerciseSet(viableExercises, {
     const aBias = biasSet.has(a.primary_muscle) ? 0 : 1;
     const bBias = biasSet.has(b.primary_muscle) ? 0 : 1;
     if (aBias !== bBias) return aBias - bBias;
-    if (experience === "advanced") {
-      return b.difficulty - a.difficulty;
-    }
+    if (experience === "advanced") return b.difficulty - a.difficulty;
     return a.difficulty - b.difficulty;
   });
 
@@ -357,38 +422,49 @@ function selectExerciseSet(viableExercises, {
 
   for (const ex of filtered) {
     const estMin = ex.minutes_est || 6;
-    if (totalMinutes + estMin > maxMinutes && picked.length >= minExercises) {
-      break;
-    }
-    if (picked.length >= maxExercises) {
-      break;
-    }
-    if (ex.pattern !== 'accessory' && patternsUsed.has(ex.pattern)) {
-      continue;
-    }
+    if (totalMinutes + estMin > maxMinutes && picked.length >= minExercises) break;
+    if (picked.length >= maxExercises) break;
+    if (ex.pattern !== 'accessory' && patternsUsed.has(ex.pattern)) continue;
+    
     picked.push(ex);
     totalMinutes += estMin;
     patternsUsed.add(ex.pattern);
     avoidCodes.add(ex.code);
+    
     const alts = ALTERNATIVES_MAP.get(ex.code);
-    if (alts) {
-      alts.forEach(altCode => avoidCodes.add(altCode));
-    }
+    if (alts) alts.forEach(altCode => avoidCodes.add(altCode));
   }
 
   const sets = baseSets(experience, intensity_pref);
-  return picked.map((ex) => ({
-    code: ex.code,
-    name: ex.name,
-    sets,
-    reps: suggestReps(goal, ex.pattern, intensity_pref, experience),
-    description: ex.description, // <-- POPRAWKA 2: Dodano brakujące pole
-    video_url: ex.video_url,   // <-- POPRAWKA 2: Dodano brakujące pole
-    weight: '' // Dodajemy puste pole na wagę
-  }));
+  
+  return picked.map((ex) => {
+    // --- NOWOŚĆ: ALGORYTM PROGRESJI ---
+    // Jeśli mamy historię dla tego ćwiczenia, sugerujemy ciężar +2.5% (zaokrąglone do 0.5)
+    let suggestedWeight = '';
+    if (historyMap[ex.code]) {
+      const lastMax = parseFloat(historyMap[ex.code]);
+      if (!isNaN(lastMax) && lastMax > 0) {
+        // Progressive overload: +2.5%
+        const prog = lastMax * 1.025;
+        // Zaokrąglenie do 0.5 kg
+        const rounded = (Math.round(prog * 2) / 2).toFixed(1);
+        suggestedWeight = rounded.toString();
+      }
+    }
+
+    return {
+      code: ex.code,
+      name: ex.name,
+      sets,
+      reps: suggestReps(goal, ex.pattern, intensity_pref, experience),
+      description: ex.description,
+      video_url: ex.video_url,
+      weight: suggestedWeight // <-- Tutaj wstawiamy wynik algorytmu
+    };
+  });
 }
 
-async function generateWeekFromDb(poolPromise, splitTemplate, answers) {
+async function generateWeekFromDb(poolPromise, splitTemplate, answers, historyMap) {
   const { location, experience, session_time } = answers;
   const equipmentSet = new Set([
     ...(answers.equipment || []),
@@ -439,6 +515,7 @@ async function generateWeekFromDb(poolPromise, splitTemplate, answers) {
       criteria,
       answers,
       avoidCodes,
+      historyMap, // Przekazujemy mapę historii
     });
 
     weekPlan.push({ day: dayLabel, block: blockName, exercises: exercises });
@@ -447,14 +524,12 @@ async function generateWeekFromDb(poolPromise, splitTemplate, answers) {
   return weekPlan;
 }
 
-// ---------------- ROUTES: eksportowane handlery ---------------- //
+// ---------------- ROUTES ---------------- //
 
-// 1. Zwraca strukturę ankiety
 exports.getQuestions = async (_req, res) => {
   res.json(QUESTIONS);
 };
 
-// 2. Główne: zapisuje odpowiedzi + generuje plan
 exports.submitAnswers = async (req, res) => {
   try {
     const answers = req.body || {};
@@ -468,14 +543,19 @@ exports.submitAnswers = async (req, res) => {
 
     const poolPromise = pool.promise();
 
+    // 1. Zapis ankiety
     const [qResult] = await poolPromise.query(
       "INSERT INTO questionnaires (user_id, answers_json, created_at) VALUES (?, ?, NOW())",
       [userId, JSON.stringify(answers)]
     );
     const questionnaireId = qResult.insertId;
 
+    // --- NOWOŚĆ: Pobranie historii do algorytmu ---
+    const historyMap = await getUserMaxWeights(poolPromise, userId);
+
+    // 2. Generowanie planu z uwzględnieniem historii
     const splitTemplate = pickSplit(answers.goal, answers.days_per_week);
-    const week = await generateWeekFromDb(pool, splitTemplate, answers);
+    const week = await generateWeekFromDb(poolPromise, splitTemplate, answers, historyMap);
     const progression = generateProgressionNotes();
 
     const plan = { 
@@ -484,6 +564,7 @@ exports.submitAnswers = async (req, res) => {
       progression 
     };
 
+    // 3. Zapis planu
     const [pResult] = await poolPromise.query(
       "INSERT INTO plans (user_id, source_questionnaire_id, plan_json, created_at) VALUES (?, ?, ?, NOW())",
       [userId, questionnaireId, JSON.stringify(plan)]
@@ -500,7 +581,6 @@ exports.submitAnswers = async (req, res) => {
   }
 };
 
-// 3. Zwraca ostatnio wygenerowany plan
 exports.getLatestPlan = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -516,7 +596,6 @@ exports.getLatestPlan = async (req, res) => {
     const raw = rows[0].plan_json;
     const latestPlan = typeof raw === "string" ? JSON.parse(raw) : (raw || {});
 
-    // Upewnij się, że ćwiczenia mają pole 'weight', jeśli go brakuje
     if (latestPlan.week && Array.isArray(latestPlan.week)) {
       for (const day of latestPlan.week) {
         if (day.exercises && Array.isArray(day.exercises)) {
@@ -536,7 +615,6 @@ exports.getLatestPlan = async (req, res) => {
   }
 };
 
-// 4. Tylko zapisuje odpowiedzi (bez generowania planu)
 exports.saveAnswers = async (req, res) => {
   try {
     const answers = req.body || {};
@@ -555,7 +633,6 @@ exports.saveAnswers = async (req, res) => {
   }
 };
 
-// 5. Zwraca ostatnie odpowiedzi ankiety (do wypełnienia formularza)
 exports.getLatestAnswers = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -578,4 +655,11 @@ exports.getLatestAnswers = async (req, res) => {
     console.error("Błąd w getLatestAnswers:", error);
     res.status(500).json({ error: "Pobieranie ostatnich odpowiedzi nie powiodło się." });
   }
+};
+
+exports.helpers = {
+  validateAnswers,
+  pickSplit,
+  baseSets,
+  suggestReps
 };

@@ -13,25 +13,25 @@ class User {
     required this.id,
     required this.username,
     required this.email,
-     this.age,
-     this.height,
-     this.weight,
-     this.dailySteps,
-     this.dailyCalories,
+    this.age,
+    this.height,
+    this.weight,
+    this.dailySteps,
+    this.dailyCalories,
     this.avatarUrl,
   });
 
-factory User.fromJson(Map<String, dynamic> json) {
+  factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'].toString(),
-      username: json['username'] ?? '',
-      email: json['email'] ?? '',
-      age: json['age'],
-      height: json['height'] != null ? (json['height'] as num).toDouble() : null,
-      weight: json['weight'] != null ? (json['weight'] as num).toDouble() : null,
-      dailySteps: json['dailySteps'],
-      dailyCalories: json['dailyCalories'],
-      avatarUrl: json['avatarUrl'],
+      username: json['username']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      age: json['age'] != null ? int.tryParse(json['age'].toString()) : null,
+      height: json['height'] != null ? double.tryParse(json['height'].toString()) : null,
+      weight: json['weight'] != null ? double.tryParse(json['weight'].toString()) : null,
+      dailySteps: json['dailySteps'] != null ? int.tryParse(json['dailySteps'].toString()) : null,
+      dailyCalories: json['dailyCalories'] != null ? int.tryParse(json['dailyCalories'].toString()) : null,
+      avatarUrl: json['avatarUrl']?.toString(),
     );
   }
 
@@ -40,7 +40,6 @@ factory User.fromJson(Map<String, dynamic> json) {
       'id': id,
       'username': username,
       'email': email,
-      // additional fields
       'age': age,
       'height': height,
       'weight': weight,

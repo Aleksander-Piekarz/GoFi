@@ -42,4 +42,9 @@ class LogService {
     
     return (res['data'] ?? res) as Map<String, dynamic>; 
   }
+
+  Future<List<dynamic>> getWeightHistory() async {
+    final res = await _api.get('/log/weight-history');
+    return (res['data'] ?? res) as List<dynamic>;
+  }
 }

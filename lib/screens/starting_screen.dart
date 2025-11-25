@@ -20,133 +20,132 @@ class _StartingScreenState extends ConsumerState<StartingScreen> {
     _bootstrap();
   }
 
-Future<void> _bootstrap() async {
-  final storage = ref.read(secureStorageProvider);
-  final tok = await storage.read(key: 'token');
+  Future<void> _bootstrap() async {
+    final storage = ref.read(secureStorageProvider);
+    final tok = await storage.read(key: 'token');
 
-  ref.read(authTokenProvider.notifier).state = tok;
+    ref.read(authTokenProvider.notifier).state = tok;
 
-  if (!mounted) return;
+    if (!mounted) return;
 
-  
-  if (tok != null && tok.isNotEmpty) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const HomeScreen()), 
-    );
+    if (tok != null && tok.isNotEmpty) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()), 
+      );
+    }
   }
-  
-}
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: Stack(
         children: [
+          // 1. TŁO - Powrót do Alignment.center (domyślne)
           Positioned.fill(
             child: Image.asset(
-              'assets/images/startingbackground.png',
+              'assets/images/startingbackground2.png', 
               fit: BoxFit.cover,
+              alignment: Alignment.center, // <-- Gwarantuje widoczność logo na środku
             ),
           ),
           
-          Positioned.fill(child: Container(color: Colors.black.withOpacity(0.15))),
-          Column(
-            children: [
-              const Spacer(),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFD605B),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 5,
+          // 2. CIEMNIEJSZY GRADIENT (Dla lepszej czytelności przycisków)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.0),
+                    Colors.black.withOpacity(0.8), // Mocniejsze przyciemnienie na dole
+                  ],
+                  stops: const [0.5, 0.7, 1.0],
+                ),
+              ),
+            ),
+          ),
+
+          // 3. PRZYCISKI
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // Przycisk "Rozpocznij Teraz"
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFD605B),
+                        foregroundColor: Colors.white,
+                        elevation: 4, // Lekki cień dla lepszego wyróżnienia
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                          );
-                        },
-                        child: const Text(
-                          "Get Started",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                        );
+                      },
+                      child: const Text(
+                        "Rozpocznij Teraz",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700, // Pogrubienie
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: const [
-                        Expanded(child: Divider(color: Colors.orange, thickness: 1, endIndent: 8)),
-                        Text("OR", style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
-                        Expanded(child: Divider(color: Colors.orange, thickness: 1, indent: 8)),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          side: BorderSide.none,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          elevation: 3,
-                        ),
-                        onPressed: () {
-                          
-                        },
-                        child: const Text(
-                          "Sign Up with Google",
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF31343D),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    GestureDetector(
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Link "Zaloguj się"
+                  Center(
+                    child: GestureDetector(
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const LoginScreen()),
                         );
                       },
-                      child: const Text.rich(
-                        TextSpan(
-                          text: "Already have an account? ",
-                          style: TextStyle(color: Colors.white70),
-                          children: [
-                            TextSpan(
-                              text: "Sign In",
-                              style: TextStyle(
-                                color: Color(0xFFFD605B),
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.underline,
-                              ),
+                      child: Container(
+                        // Dodatkowy kontener zwiększający obszar kliknięcia
+                        padding: const EdgeInsets.all(8.0),
+                        child: RichText(
+                          text: TextSpan(
+                            text: "Masz już konto? ",
+                            style: const TextStyle(
+                              color: Colors.white70, 
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
                             ),
-                          ],
+                            children: [
+                              TextSpan(
+                                text: "Zaloguj się",
+                                style: TextStyle(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 40),
-            ],
+            ),
           ),
         ],
       ),

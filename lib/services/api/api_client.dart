@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 
-
 class ApiException implements Exception {
   final int? statusCode;
   final String message;
@@ -13,16 +12,22 @@ class ApiException implements Exception {
 
 typedef TokenProvider = Future<String?> Function();
 
+// Definiujemy typ funkcji asynchronicznej dla callbacka
+typedef UnauthorizedCallback = Future<void> Function();
+
 class ApiClient {
   ApiClient({
     required this.baseUrl,
-    required this.getAuthToken,         
+    required this.getAuthToken,
+    this.onUnauthorized,
     this.defaultHeaders = const {},
     this.timeout = const Duration(seconds: 20),
   });
 
   final String baseUrl;
   final TokenProvider getAuthToken;
+  // ZMIANA: Typ funkcji to teraz Future<void> Function()?, a nie VoidCallback
+  final UnauthorizedCallback? onUnauthorized; 
   final Map<String, String> defaultHeaders;
   final Duration timeout;
 
@@ -41,6 +46,15 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> _handle(http.Response res) async {
+    if (res.statusCode == 401) {
+      // ZMIANA: Czekamy (await), aż wylogowanie się zakończy
+      if (onUnauthorized != null) {
+        await onUnauthorized!();
+      }
+      // Dopiero po wyczyszczeniu tokenu rzucamy błąd
+      throw const ApiException('Sesja wygasła. Zaloguj się ponownie.', statusCode: 401);
+    }
+
     final ok = res.statusCode >= 200 && res.statusCode < 300;
     final text = res.body.isEmpty ? '{}' : res.body;
 

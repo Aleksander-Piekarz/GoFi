@@ -204,9 +204,30 @@ router.post("/weight", auth(true), async (req, res) => {
   }
 
   try {
-    const sql = "INSERT INTO weight_logs (user_id, weight, date_logged) VALUES (?, ?, NOW())";
-    // ⭐️ Używa pool.promise()
-    await pool.promise().query(sql, [userId, weightValue]);
+    const poolPromise = pool.promise();
+
+    // 1. Sprawdź, czy istnieje już wpis z dzisiejszą datą
+    const checkSql = `
+      SELECT id FROM weight_logs 
+      WHERE user_id = ? AND CAST(date_logged AS DATE) = CAST(NOW() AS DATE)
+      LIMIT 1
+    `;
+    const [existing] = await poolPromise.query(checkSql, [userId]);
+
+    if (existing.length > 0) {
+      // UPDATE: Jeśli wpis istnieje, aktualizujemy go (nadpisujemy wagę)
+      const updateSql = `
+        UPDATE weight_logs 
+        SET weight = ?, date_logged = NOW() 
+        WHERE id = ?
+      `;
+      await poolPromise.query(updateSql, [weightValue, existing[0].id]);
+      console.log(`Zaktualizowano wagę dla user ${userId} (ID logu: ${existing[0].id})`);
+    } else {
+      const insertSql = "INSERT INTO weight_logs (user_id, weight, date_logged) VALUES (?, ?, NOW())";
+      await poolPromise.query(insertSql, [userId, weightValue]);
+      console.log(`Dodano nową wagę dla user ${userId}`);
+    }
     
     res.json({ ok: true, newWeight: weightValue });
 
@@ -263,6 +284,22 @@ router.post("/latest-for-exercises", auth(true), async (req, res) => {
 
   } catch (error){
     console.error("Błąd pobierania ostatnich logów dla ćwiczeń:", error);
+    res.status(500).json({ error: "Błąd serwera" });
+  }
+});
+router.get("/weight-history", auth(true), async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const sql = `
+      SELECT weight, date_logged
+      FROM weight_logs
+      WHERE user_id = ?
+      ORDER BY date_logged ASC
+    `;
+    const [rows] = await pool.promise().query(sql, [userId]);
+    res.json(rows);
+  } catch (error) {
+    console.error("Błąd pobierania historii wagi:", error);
     res.status(500).json({ error: "Błąd serwera" });
   }
 });

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gofi/screens/home_screen.dart';
 import 'package:gofi/screens/profile_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'app/theme.dart';

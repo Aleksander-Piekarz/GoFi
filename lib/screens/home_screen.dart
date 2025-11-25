@@ -1,24 +1,27 @@
 
 import 'dart:io'; 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gofi/screens/starting_screen.dart';
 import 'package:pedometer/pedometer.dart';
 import 'package:device_info_plus/device_info_plus.dart'; 
 import 'package:intl/intl.dart'; 
 import '../utils/converters.dart';
 import 'profile_screen.dart';
-import '../services/api/questionnaire_service.dart';
 import 'plan_view.dart';
 import 'questionnaire_screen.dart';
 import '../services/api/providers.dart'; 
 import 'active_workout_screen.dart';
 import 'workout_details_screen.dart'; 
-import 'exercise_stats_screen.dart'; 
+
 
 
 
 final planProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
+  ref.watch(authTokenProvider);
+  
   final svc = ref.read(questionnaireServiceProvider);
   final plan = await svc.getLatestPlan();
   if (plan.isEmpty) return null;
@@ -120,7 +123,6 @@ class _HomeTab extends ConsumerWidget {
   final FutureProvider<Map<String, dynamic>?> planProvider;
   const _HomeTab({required this.planProvider});
 
-  
   void _showLogWeightDialog(BuildContext context, WidgetRef ref, UnitConverter converter) {
     final weightCtrl = TextEditingController();
     
@@ -133,7 +135,7 @@ class _HomeTab extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Najlepiej ważyć się rano, na czczo i po wizycie w toalecie, aby pomiar był jak najbardziej wiarygodny.',
+              'Najlepiej ważyć się rano, na czczo.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
@@ -161,15 +163,15 @@ class _HomeTab extends ConsumerWidget {
               final displayValue = double.tryParse(weightCtrl.text); 
               if (displayValue == null || displayValue <= 0) return;
               
-              
               final kgToSave = converter.saveWeight(displayValue);
 
               try {
                 await ref.read(logServiceProvider).saveWeight(kgToSave); 
                 ref.invalidate(userProfileProvider);
+                ref.invalidate(weightHistoryProvider);
                 if (context.mounted) Navigator.pop(ctx);
               } catch (e) {
-                
+                print('Błąd zapisu: $e');
               }
             },
             child: const Text('Zapisz'),
@@ -188,9 +190,43 @@ class _HomeTab extends ConsumerWidget {
 
     return asyncPlan.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Błąd ładowania: $err')),
+      error: (err, stack) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                'Wystąpił problem:\n$err',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () async {
+                  final auth = ref.read(authServiceProvider);
+                  await auth.logout();
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const StartingScreen()),
+                      (route) => false,
+                    );
+                  }
+                },
+                icon: const Icon(Icons.logout),
+                label: const Text('Wyloguj się'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.red.shade100,
+                  foregroundColor: Colors.red.shade900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
       data: (plan) {
-        
         final (int stepGoal, String unitSystem, double? latestWeight) = asyncProfile.when(
           data: (profile) {
             final goal = profile['dailySteps'] as int? ?? 10000;
@@ -215,7 +251,7 @@ class _HomeTab extends ConsumerWidget {
                   Text('Witaj w GoFi!', style: textTheme.headlineMedium),
                   const SizedBox(height: 12),
                   const Text(
-                    'Wygląda na to, że nie masz jeszcze planu. Wypełnij kwestionariusz, abyśmy mogli go dla Ciebie przygotować.',
+                    'Nie masz jeszcze planu. Wypełnij kwestionariusz.',
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
@@ -251,7 +287,7 @@ class _HomeTab extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           children: [
             Text('Witaj z powrotem!', style: textTheme.headlineMedium),
-            Text('Gotowy na dzisiejszy trening?', style: textTheme.bodyLarge),
+            Text('Gotowy na trening?', style: textTheme.bodyLarge),
             
             const SizedBox(height: 24),
             Text('TWOJA AKTYWNOŚĆ', style: textTheme.labelLarge),
@@ -291,13 +327,14 @@ class _HomeTab extends ConsumerWidget {
   Widget _buildActivityCard(BuildContext context, AsyncValue<int> asyncSteps, int stepGoal) {
     final theme = Theme.of(context);
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0),
         child: Row(
           children: [
             SizedBox(
-              width: 50,
-              height: 50,
+              width: 40,
+              height: 40,
               child: asyncSteps.when(
                 data: (steps) {
                   final progress = (stepGoal > 0 ? (steps / stepGoal) : 0.0).clamp(0.0, 1.0);
@@ -306,37 +343,43 @@ class _HomeTab extends ConsumerWidget {
                     children: [
                       CircularProgressIndicator(
                         value: progress,
-                        strokeWidth: 5,
+                        strokeWidth: 4,
                         backgroundColor: theme.colorScheme.surfaceVariant,
                         color: theme.colorScheme.primary,
                       ),
-                      Icon(Icons.directions_walk, size: 24)
+                      const Icon(Icons.directions_walk, size: 20)
                     ],
                   );
                 },
                 loading: () => CircularProgressIndicator(
-                  strokeWidth: 5,
+                  strokeWidth: 4,
                   backgroundColor: theme.colorScheme.surfaceVariant,
                 ),
                 error: (_, __) => Icon(Icons.error_outline,
-                    color: theme.colorScheme.error, size: 30),
+                    color: theme.colorScheme.error, size: 24),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: asyncSteps.when(
                 data: (steps) => Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('$steps', style: theme.textTheme.headlineSmall),
-                    Text('z $stepGoal', style: theme.textTheme.bodySmall),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text('$steps', style: theme.textTheme.headlineSmall),
+                    ),
+                    // --- POPRAWKA 1: Wyświetlanie celu ---
+                    Text('/ $stepGoal', 
+                      style: TextStyle(
+                        fontSize: 12, 
+                        color: theme.colorScheme.onSurfaceVariant
+                      )
+                    ),
                   ],
                 ),
-                loading: () => const Text('Ładuję...'),
-                error: (err, __) => Text(
-                  'Błąd',
-                  style: TextStyle(color: theme.colorScheme.error),
-                ),
+                loading: () => const Text('...'),
+                error: (_, __) => const Text('Błąd', style: TextStyle(fontSize: 12)),
               ),
             ),
           ],
@@ -345,48 +388,54 @@ class _HomeTab extends ConsumerWidget {
     );
   }
 
- Widget _buildWeightLogCard(BuildContext context, WidgetRef ref, double? latestWeightKg, UnitConverter converter) {
+  Widget _buildWeightLogCard(BuildContext context, WidgetRef ref, double? latestWeightKg, UnitConverter converter) {
     final theme = Theme.of(context);
-    
     
     final String displayWeight = latestWeightKg != null
         ? converter.displayWeight(latestWeightKg).toString()
         : '-';
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 50,
-              height: 50,
-              child: Stack(/* ... (ikona bez zmian) ... */),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$displayWeight${converter.unitLabel}', 
-                    style: theme.textTheme.headlineSmall,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                  Text('Ostatnia waga', style: theme.textTheme.bodySmall),
-                ],
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          _showLogWeightDialog(context, ref, converter); 
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.monitor_weight_outlined, 
+                  color: theme.colorScheme.onPrimaryContainer, size: 20),
               ),
-            ),
-            IconButton(
-              icon: Icon(Icons.add_circle, color: theme.colorScheme.primary, size: 30),
-              onPressed: () {
-                _showLogWeightDialog(context, ref, converter); 
-              },
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            )
-          ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '$displayWeight${converter.unitLabel}', 
+                        style: theme.textTheme.headlineSmall,
+                      ),
+                    ),
+                    const Text('Waga', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ),
+              // --- POPRAWKA 2: Dodanie "plusika" na końcu ---
+              Icon(Icons.add, color: theme.colorScheme.primary),
+            ],
+          ),
         ),
       ),
     );
@@ -455,65 +504,173 @@ class _StatsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncLogs = ref.watch(workoutLogsProvider);
+    final asyncWeightHistory = ref.watch(weightHistoryProvider);
     final unitSystem = ref.watch(userProfileProvider).when(
           data: (profile) => profile['unitSystem'] as String? ?? 'metric',
           loading: () => 'metric',
           error: (_, __) => 'metric',
         );
+    
+    final converter = UnitConverter(unitSystem: unitSystem);
 
-    return asyncLogs.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Błąd ładowania statystyk: $err')),
-      data: (logs) {
-        if (logs.isEmpty) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Text(
-                'Nie zalogowałeś jeszcze żadnego treningu. Ukończ trening, aby zobaczyć tutaj swoją historię!',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
-        }
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.refresh(workoutLogsProvider);
+        ref.refresh(weightHistoryProvider);
+      },
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // --- SEKCJA 1: WYKRES WAGI ---
+          Text('Twoja Waga', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 250,
+            child: asyncWeightHistory.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Błąd wykresu: $e')),
+              data: (history) {
+                if (history.isEmpty) {
+                  return const Center(child: Text('Brak pomiarów wagi.'));
+                }
+                
+                // 1. GRUPOWANIE DANYCH PO DACIE (Naprawa "dziwnego wykresu")
+                // Tworzymy mapę, gdzie kluczem jest data (np. "2025-11-25"), 
+                // a wartością ostatni pomiar z tego dnia.
+                final Map<String, dynamic> uniqueHistory = {};
+                
+                for (final entry in history) {
+                  final rawDate = DateTime.parse(entry['date_logged'].toString());
+                  // Formatujemy datę bez godziny, żeby zgrupować wpisy z tego samego dnia
+                  final dateKey = DateFormat('yyyy-MM-dd').format(rawDate);
+                  
+                  // Nadpisujemy - dzięki temu w mapie zostanie tylko OSTATNI wpis z danego dnia
+                  uniqueHistory[dateKey] = entry;
+                }
 
-        return RefreshIndicator(
-          onRefresh: () => ref.refresh(workoutLogsProvider.future),
-          child: ListView.builder(
-            itemCount: logs.length,
-            itemBuilder: (context, index) {
-              final log = logs[index] as Map;
-              final logId = log['id'] as int;
-              final planName = log['plan_name']?.toString() ?? 'Trening';
-              
-              String dateStr = 'Brak daty';
-              if (log['date_completed'] != null) {
-                final date = DateTime.parse(log['date_completed'] as String);
-                dateStr = DateFormat('E, d MMM yyyy', 'pl_PL').format(date);
-              }
+                // Zamieniamy z powrotem na listę i sortujemy
+                final sortedEntries = uniqueHistory.values.toList();
+                sortedEntries.sort((a, b) {
+                  final dateA = DateTime.parse(a['date_logged'].toString());
+                  final dateB = DateTime.parse(b['date_logged'].toString());
+                  return dateA.compareTo(dateB);
+                });
 
-              return ListTile(
-                leading: const Icon(Icons.calendar_today),
-                title: Text(planName),
-                subtitle: Text(dateStr),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => WorkoutDetailsScreen(
-                        logId: logId,
-                        planName: planName,
-                        unitSystem: unitSystem,
+                // 2. TWORZENIE PUNKTÓW WYKRESU
+                final spots = sortedEntries.map((entry) {
+                  final date = DateTime.parse(entry['date_logged'].toString());
+                  final weightKg = double.tryParse(entry['weight'].toString()) ?? 0.0;
+                  final displayWeight = converter.displayWeight(weightKg);
+                  
+                  // Używamy timestamp jako X
+                  return FlSpot(date.millisecondsSinceEpoch.toDouble(), displayWeight);
+                }).toList();
+
+                if (spots.isEmpty) return const Center(child: Text('Brak danych.'));
+
+                return LineChart(
+                  LineChartData(
+                    // ... reszta konfiguracji wykresu bez zmian ...
+                    gridData: FlGridData(show: false),
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 40,
+                          getTitlesWidget: (val, _) => Text(
+                            '${val.toInt()}', 
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                        ),
                       ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          // Zabezpieczenie przed dzieleniem przez zero, gdy jest tylko 1 punkt
+                          interval: spots.length > 1 
+                              ? (spots.last.x - spots.first.x) / 4 
+                              : null, 
+                          getTitlesWidget: (val, _) {
+                            final date = DateTime.fromMillisecondsSinceEpoch(val.toInt());
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                DateFormat('dd/MM').format(date),
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     ),
+                    borderData: FlBorderData(show: false),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: spots,
+                        isCurved: true, // Teraz będzie ładnie, bo punkty są unikalne w czasie
+                        color: Theme.of(context).colorScheme.primary,
+                        barWidth: 3,
+                        dotData: const FlDotData(show: true),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 32),
+
+          // --- SEKCJA 2: HISTORIA TRENINGÓW (Twoja stara lista) ---
+          Text('Historia Treningów', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          
+          asyncLogs.when(
+            loading: () => const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
+            error: (e, _) => Text('Błąd: $e'),
+            data: (logs) {
+              if (logs.isEmpty) return const Text('Brak historii treningów.');
+              // Wyświetlamy listę wewnątrz ListView (używamy shrinkWrap i physics, by nie było konfliktu scrollowania)
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: logs.length,
+                separatorBuilder: (_,__) => const Divider(),
+                itemBuilder: (ctx, i) {
+                  final log = logs[i] as Map;
+                  final logId = log['id'] as int;
+                  final name = log['plan_name'] ?? 'Trening';
+                  final date = DateTime.parse(log['date_completed'].toString());
+                  
+                  return ListTile(
+                    leading: const Icon(Icons.fitness_center),
+                    title: Text(name),
+                    subtitle: Text(DateFormat('EEE, d MMM yyyy', 'pl_PL').format(date)),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => WorkoutDetailsScreen(
+                            logId: logId,
+                            planName: name.toString(),
+                            unitSystem: unitSystem,
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               );
             },
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

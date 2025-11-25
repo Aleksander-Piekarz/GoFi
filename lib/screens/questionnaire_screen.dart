@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api/providers.dart';
-
-
 import 'home_screen.dart';
 
 class QuestionnaireScreen extends ConsumerStatefulWidget {
@@ -76,6 +74,7 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
                   selected: current == value,
                   onSelected: (_) => setState(() {
                     _answers[id] = value;
+                    // Reset sprzętu przy zmianie lokalizacji (UX)
                     if (id == 'location') _answers.remove('equipment');
                   }),
                 );
@@ -102,7 +101,27 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
                   selected: selected,
                   onSelected: (on) => setState(() {
                     final set = (_answers[id] as List?)?.map((e) => e.toString()).toSet() ?? <String>{};
-                    if (on) set.add(value); else set.remove(value);
+                    
+                    // --- POPRAWKA LOGIKI "NONE" ---
+                    if (value == 'none') {
+                      // Jeśli użytkownik klika "Brak":
+                      if (on) {
+                        set.clear();      // Usuwamy wszystko inne
+                        set.add('none');  // Zaznaczamy tylko "Brak"
+                      } else {
+                        set.remove('none');
+                      }
+                    } else {
+                      // Jeśli użytkownik klika cokolwiek innego (np. hantle):
+                      if (on) {
+                        set.remove('none'); // Automatycznie odznaczamy "Brak"
+                        set.add(value);
+                      } else {
+                        set.remove(value);
+                      }
+                    }
+                    // -------------------------------
+
                     _answers[id] = set.toList();
                   }),
                 );
@@ -140,11 +159,9 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
     }
   }
 
-  
   Future<void> _submitAndNavigate() async {
     setState(() => _saving = true);
     try {
-      
       for (final raw in _questions) {
         final q = raw as Map;
         if (!_shouldShow(q)) continue;
@@ -156,15 +173,12 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
         }
       }
 
-      
       final svc = ref.read(questionnaireServiceProvider);
       await svc.submitAndGetPlan(_answers);
       if (!mounted) return;
 
-      
       ref.invalidate(planProvider);
 
-      
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
         (route) => false,
@@ -177,7 +191,6 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
       if (mounted) setState(() => _saving = false);
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -198,7 +211,6 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
           },
         ),
       ),
-      
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16.0),
         child: FilledButton(
