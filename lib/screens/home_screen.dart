@@ -521,34 +521,27 @@ class _StatsTab extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // --- SEKCJA 1: WYKRES WAGI ---
           Text('Twoja Waga', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 16),
           SizedBox(
             height: 250,
             child: asyncWeightHistory.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Błąd wykresu: $e')),
+              error: (e, _) => const Center(child: Text('Błąd wykresu')),
               data: (history) {
                 if (history.isEmpty) {
                   return const Center(child: Text('Brak pomiarów wagi.'));
                 }
                 
-                // 1. GRUPOWANIE DANYCH PO DACIE (Naprawa "dziwnego wykresu")
-                // Tworzymy mapę, gdzie kluczem jest data (np. "2025-11-25"), 
-                // a wartością ostatni pomiar z tego dnia.
+                // 1. Grupowanie po dacie (żeby mieć 1 punkt na dzień)
                 final Map<String, dynamic> uniqueHistory = {};
-                
                 for (final entry in history) {
                   final rawDate = DateTime.parse(entry['date_logged'].toString());
-                  // Formatujemy datę bez godziny, żeby zgrupować wpisy z tego samego dnia
                   final dateKey = DateFormat('yyyy-MM-dd').format(rawDate);
-                  
-                  // Nadpisujemy - dzięki temu w mapie zostanie tylko OSTATNI wpis z danego dnia
                   uniqueHistory[dateKey] = entry;
                 }
 
-                // Zamieniamy z powrotem na listę i sortujemy
+                // 2. Sortowanie i przygotowanie prostej listy
                 final sortedEntries = uniqueHistory.values.toList();
                 sortedEntries.sort((a, b) {
                   final dateA = DateTime.parse(a['date_logged'].toString());
@@ -556,69 +549,99 @@ class _StatsTab extends ConsumerWidget {
                   return dateA.compareTo(dateB);
                 });
 
-                // 2. TWORZENIE PUNKTÓW WYKRESU
-                final spots = sortedEntries.map((entry) {
-                  final date = DateTime.parse(entry['date_logged'].toString());
+                // 3. Tworzenie punktów: X to po prostu INDEX (0, 1, 2...), a nie czas
+                final spots = <FlSpot>[];
+                for (int i = 0; i < sortedEntries.length; i++) {
+                  final entry = sortedEntries[i];
                   final weightKg = double.tryParse(entry['weight'].toString()) ?? 0.0;
                   final displayWeight = converter.displayWeight(weightKg);
-                  
-                  // Używamy timestamp jako X
-                  return FlSpot(date.millisecondsSinceEpoch.toDouble(), displayWeight);
-                }).toList();
+                  spots.add(FlSpot(i.toDouble(), displayWeight));
+                }
 
                 if (spots.isEmpty) return const Center(child: Text('Brak danych.'));
 
-                return LineChart(
-                  LineChartData(
-                    // ... reszta konfiguracji wykresu bez zmian ...
-                    gridData: FlGridData(show: false),
-                    titlesData: FlTitlesData(
-                      leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 40,
-                          getTitlesWidget: (val, _) => Text(
-                            '${val.toInt()}', 
-                            style: const TextStyle(fontSize: 10),
+                // --- UPROSZCZONY WYKRES ---
+                return Padding(
+                  // Dodajemy padding po bokach, żeby skrajne daty nie były ucięte
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: LineChart(
+                    LineChartData(
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false, // Tylko poziome linie
+                        horizontalInterval: 5,   // Linie co 5 kg/lbs
+                      ),
+                      titlesData: FlTitlesData(
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            getTitlesWidget: (val, meta) {
+                              // Pokazuj tylko całe liczby na osi Y
+                              if (val == val.toInt().toDouble()) {
+                                return Text(
+                                  val.toInt().toString(), 
+                                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        ),
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            // Interwał 1 oznacza: podpisz każdy punkt
+                            // (Jeśli punktów będzie bardzo dużo, można tu dać logikę np. interval: spots.length > 5 ? 2 : 1)
+                            interval: spots.length > 6 ? (spots.length / 5).ceilToDouble() : 1,
+                            getTitlesWidget: (val, meta) {
+                              final index = val.toInt();
+                              // Zabezpieczenie przed wyjściem poza zakres
+                              if (index < 0 || index >= sortedEntries.length) {
+                                return const SizedBox.shrink();
+                              }
+                              
+                              final entry = sortedEntries[index];
+                              final date = DateTime.parse(entry['date_logged'].toString());
+                              
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  DateFormat('dd.MM').format(date),
+                                  style: const TextStyle(fontSize: 10),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          // Zabezpieczenie przed dzieleniem przez zero, gdy jest tylko 1 punkt
-                          interval: spots.length > 1 
-                              ? (spots.last.x - spots.first.x) / 4 
-                              : null, 
-                          getTitlesWidget: (val, _) {
-                            final date = DateTime.fromMillisecondsSinceEpoch(val.toInt());
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Text(
-                                DateFormat('dd/MM').format(date),
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                            );
-                          },
+                      borderData: FlBorderData(show: false),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: spots,
+                          isCurved: false, // Proste linie są czytelniejsze przy małej ilości danych
+                          color: Theme.of(context).colorScheme.primary,
+                          barWidth: 3,
+                          dotData: FlDotData(
+                            show: true,
+                            getDotPainter: (spot, percent, barData, index) {
+                              return FlDotCirclePainter(
+                                radius: 4,
+                                color: Theme.of(context).colorScheme.primary,
+                                strokeWidth: 2,
+                                strokeColor: Colors.black, // Kontrastowa obwódka
+                              );
+                            },
+                          ),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                          ),
                         ),
-                      ),
-                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      ],
                     ),
-                    borderData: FlBorderData(show: false),
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: spots,
-                        isCurved: true, // Teraz będzie ładnie, bo punkty są unikalne w czasie
-                        color: Theme.of(context).colorScheme.primary,
-                        barWidth: 3,
-                        dotData: const FlDotData(show: true),
-                        belowBarData: BarAreaData(
-                          show: true,
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
-                        ),
-                      ),
-                    ],
                   ),
                 );
               },
@@ -627,16 +650,20 @@ class _StatsTab extends ConsumerWidget {
 
           const SizedBox(height: 32),
 
-          // --- SEKCJA 2: HISTORIA TRENINGÓW (Twoja stara lista) ---
           Text('Historia Treningów', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           
           asyncLogs.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
-            error: (e, _) => Text('Błąd: $e'),
+            error: (e, _) => Center(
+              child: FilledButton.icon(
+                onPressed: () => ref.refresh(workoutLogsProvider),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Odśwież historię'),
+              ),
+            ),
             data: (logs) {
               if (logs.isEmpty) return const Text('Brak historii treningów.');
-              // Wyświetlamy listę wewnątrz ListView (używamy shrinkWrap i physics, by nie było konfliktu scrollowania)
               return ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -674,9 +701,6 @@ class _StatsTab extends ConsumerWidget {
     );
   }
 }
-
-
-
 class _PlanTab extends ConsumerStatefulWidget {
   final FutureProvider<Map<String, dynamic>?> planProvider;
   const _PlanTab({required this.planProvider});

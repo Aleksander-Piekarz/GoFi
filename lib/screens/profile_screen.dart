@@ -16,8 +16,6 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   
-
-
   Future<void> _editStepGoal(int currentGoal) async {
     final newGoalCtrl = TextEditingController(text: currentGoal.toString());
 
@@ -50,9 +48,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (newStepCount != null && newStepCount > 0 && newStepCount != currentGoal) {
         try {
           final userService = ref.read(userServiceProvider);
-          
           await userService.updateSettings(dailySteps: newStepCount);
-          
           ref.invalidate(userProfileProvider);
         } catch (e) {
           _showSnack('Nie udało się zapisać celu: $e');
@@ -67,8 +63,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await userService.updateSettings(notifEnabled: enabled);
       ref.invalidate(userProfileProvider); 
     } catch (e) {
-      
-      
       _showSnack('Nie udało się zapisać ustawienia: $e');
       ref.invalidate(userProfileProvider);
     }
@@ -110,8 +104,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     }
   }
-
-  
 
   Future<void> _changePassword() async {
     final currentCtrl = TextEditingController();
@@ -196,10 +188,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
   
-  
-  
-  void _editProfile() { _showSnack('Edytuj profil (placeholder)'); }
-  void _changeEmail() { _showSnack('Zmiana emaila (placeholder)'); }
   void _changeAvatar() { _showSnack('Zmiana avatara (placeholder)'); }
 
   void _showSnack(String msg) {
@@ -209,7 +197,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    
     final asyncProfile = ref.watch(userProfileProvider);
     final textTheme = Theme.of(context).textTheme;
 
@@ -221,13 +208,52 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       
       body: asyncProfile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
+        // --- POPRAWKA: Rozbudowana obsługa błędów ---
         error: (err, stack) => Center(
-            child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text('Błąd ładowania profilu: $err'),
-        )),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text(
+                  'Nie udało się załadować profilu.',
+                  style: textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  err.toString(),
+                  style: textTheme.bodySmall?.copyWith(color: Colors.red),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 24),
+                // Przycisk odświeżania
+                FilledButton.icon(
+                  onPressed: () => ref.refresh(userProfileProvider),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Spróbuj ponownie'),
+                ),
+                const SizedBox(height: 12),
+                // Przycisk wylogowania (zawsze dostępny)
+                OutlinedButton.icon(
+                  onPressed: _logout,
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Wyloguj się'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // ---------------------------------------------
         data: (profile) {
-          
           final nameToShow = (profile['username'] as String?)?.trim() ?? 'Użytkownik';
           final emailToShow = (profile['email'] as String?)?.trim() ?? '—';
           final unitSystem = (profile['unitSystem'] as String?) ?? 'metric';
@@ -237,7 +263,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              
+              // --- SEKCJA NAGŁÓWKA ---
               Row(
                 children: [
                   GestureDetector(
@@ -268,16 +294,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ],
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: _editProfile,
-                    icon: const Icon(Icons.edit),
-                    label: const Text('Edytuj'),
-                  ),
                 ],
               ),
               const SizedBox(height: 24),
 
-              
+              // --- KONTO ---
               Text('Konto', style: textTheme.titleSmall),
               const SizedBox(height: 8),
               Card(
@@ -287,15 +308,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       leading: const Icon(Icons.alternate_email),
                       title: const Text('Email'),
                       subtitle: Text(emailToShow),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: _changeEmail,
                     ),
                     const Divider(height: 1),
                     ListTile(
                       leading: const Icon(Icons.edit_note_outlined),
                       title: const Text('Kwestionariusz'),
-                      subtitle:
-                          const Text('Uzupełnij lub edytuj odpowiedzi'),
+                      subtitle: const Text('Uzupełnij lub edytuj odpowiedzi'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
                         Navigator.push(
@@ -311,13 +329,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(height: 16),
 
-              
+              // --- PREFERENCJE ---
               Text('Preferencje', style: textTheme.titleSmall),
               const SizedBox(height: 8),
               Card(
                 child: Column(
                   children: [
-                    
                     ListTile(
                       leading: const Icon(Icons.directions_walk),
                       title: const Text('Dzienny cel kroków'),
@@ -326,7 +343,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       onTap: () => _editStepGoal(dailySteps),
                     ),
                     const Divider(height: 1),
-                    
                     ListTile(
                       leading: const Icon(Icons.straighten),
                       title: const Text('Jednostki'),
@@ -339,7 +355,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       onTap: () => _pickUnits(unitSystem),
                     ),
                     const Divider(height: 1),
-                    
                     SwitchListTile(
                       secondary: const Icon(Icons.notifications_active),
                       title: const Text('Powiadomienia'),
@@ -351,7 +366,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(height: 16),
 
-              
+              // --- BEZPIECZEŃSTWO ---
               Text('Bezpieczeństwo', style: textTheme.titleSmall),
               const SizedBox(height: 8),
               Card(
@@ -376,7 +391,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               Center(
                 child: Text(
-                  'GoFi • v0.1.0 (demo)',
+                  'GoFi • v1.0.0',
                   style: textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.outline,
                   ),
