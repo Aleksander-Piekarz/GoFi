@@ -5,7 +5,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_client.dart';
 import 'auth_service.dart';
 import 'log_service.dart';
-import 'questionnaire_service.dart'; 
+import 'questionnaire_service.dart';
+import 'exercise_service.dart';
 
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
   return const FlutterSecureStorage();
@@ -97,8 +98,13 @@ final workoutLogDetailsProvider = FutureProvider.family<List<dynamic>, int>((ref
 
 final questionnaireServiceProvider = Provider<QuestionnaireService>((ref) {
   final api = ref.read(apiClientProvider);
-  final storage = ref.read(secureStorageProvider); // <-- Dodano
+  final storage = ref.read(secureStorageProvider);
   return QuestionnaireService(api, storage);
+});
+
+final exerciseServiceProvider = Provider<ExerciseService>((ref) {
+  final api = ref.read(apiClientProvider);
+  return ExerciseService(api);
 });
 
 final latestLogsProvider = FutureProvider.family<Map<String, dynamic>, List<String>>(

@@ -1,8 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { auth } = require('../middleware/auth');
-
+const ctrl = require('../controllers/exerciseController');
 const { pool } = require('../lib/db'); 
+
+
+
+
 
 router.get('/search', auth(true), async (req,res) => {
   const { pattern, muscle, equip, loc } = req.query;
@@ -25,5 +29,7 @@ router.get('/search', auth(true), async (req,res) => {
   const [rows] = await pool.promise().query(sql, args);
   res.json(rows);
 });
+
+router.get('/:code/alternatives', auth(true), ctrl.getAlternatives);
 
 module.exports = router;

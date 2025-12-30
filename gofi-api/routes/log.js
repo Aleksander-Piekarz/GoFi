@@ -8,7 +8,8 @@ const { pool } = require("../lib/db"); // ⭐️ Używa globalnej puli
 // ---
 router.post("/workout", auth(true), async (req, res) => {
   const userId = req.user?.id;
-  const { planName, exercises } = req.body; 
+  // --- ZMIANA: Pobieramy też date_completed oraz name (dla kompatybilności) ---
+  const { planName, name, exercises, date_completed } = req.body; 
 
   if (!exercises || !Array.isArray(exercises) || exercises.length === 0) {
     return res.status(400).json({ error: "Brak ćwiczeń do zapisania." });
@@ -20,9 +21,16 @@ router.post("/workout", auth(true), async (req, res) => {
     connection = await pool.promise().getConnection();
     await connection.beginTransaction();
 
+    // --- ZMIANA: Logika ustalania daty i nazwy ---
+    // Jeśli data została przesłana (np. z generatora), użyj jej. W przeciwnym razie data dzisiejsza.
+    const dateToSave = date_completed ? new Date(date_completed) : new Date();
+    
+    // Jeśli planName jest puste, spróbuj użyć 'name', a ostatecznie "Trening"
+    const nameToSave = planName || name || "Trening";
+
     const [logResult] = await connection.query(
-      "INSERT INTO workout_logs (user_id, plan_name, date_completed) VALUES (?, ?, NOW())",
-      [userId, planName || "Trening"]
+      "INSERT INTO workout_logs (user_id, plan_name, date_completed) VALUES (?, ?, ?)",
+      [userId, nameToSave, dateToSave]
     );
     const newLogId = logResult.insertId;
 
@@ -125,7 +133,7 @@ router.get("/exercise/:code", auth(true), async (req, res) => {
 });
 
 // ---
-// 4. ENDPOINT: Lista wszystkich sesji treningowych (TEN POWODOWAŁ BŁĄD)
+// 4. ENDPOINT: Lista wszystkich sesji treningowych
 // ---
 router.get("/workouts", auth(true), async (req, res) => {
   const userId = req.user.id;
@@ -287,6 +295,7 @@ router.post("/latest-for-exercises", auth(true), async (req, res) => {
     res.status(500).json({ error: "Błąd serwera" });
   }
 });
+
 router.get("/weight-history", auth(true), async (req, res) => {
   const userId = req.user.id;
   try {
@@ -303,6 +312,5 @@ router.get("/weight-history", auth(true), async (req, res) => {
     res.status(500).json({ error: "Błąd serwera" });
   }
 });
-
 
 module.exports = router;

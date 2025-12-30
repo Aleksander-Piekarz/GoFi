@@ -1,4 +1,3 @@
-
 import 'dart:io'; 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -16,8 +15,7 @@ import '../services/api/providers.dart';
 import 'active_workout_screen.dart';
 import 'workout_details_screen.dart'; 
 
-
-
+// --- PROVIDERS ---
 
 final planProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   ref.watch(authTokenProvider);
@@ -27,7 +25,6 @@ final planProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   if (plan.isEmpty) return null;
   return plan;
 });
-
 
 final stepCountProvider = StreamProvider<int>((ref) async* {
   bool isEmulator = false;
@@ -52,6 +49,7 @@ final stepCountProvider = StreamProvider<int>((ref) async* {
   }
 });
 
+// --- HOME SCREEN ---
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -70,11 +68,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('GoFi'),
+        title: const Text('GoFi', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.account_circle_outlined),
+            icon: const CircleAvatar(
+              radius: 16,
+              child: Icon(Icons.person, size: 20),
+            ),
             onPressed: () {
               Navigator.push(
                 context,
@@ -82,6 +83,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               );
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: IndexedStack(
@@ -92,24 +94,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _PlanTab(planProvider: planProvider),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
-        selectedItemColor: theme.colorScheme.primary,
-        items: const [
-          BottomNavigationBarItem(
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        destinations: const [
+          NavigationDestination(
             icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
+            selectedIcon: Icon(Icons.home),
             label: 'Home',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
-            activeIcon: Icon(Icons.bar_chart),
+            selectedIcon: Icon(Icons.bar_chart),
             label: 'Statystyki',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Icons.fitness_center_outlined),
-            activeIcon: Icon(Icons.fitness_center),
+            selectedIcon: Icon(Icons.fitness_center),
             label: 'Plan',
           ),
         ],
@@ -118,6 +119,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+// --- TABS ---
 
 class _HomeTab extends ConsumerWidget {
   final FutureProvider<Map<String, dynamic>?> planProvider;
@@ -145,6 +147,7 @@ class _HomeTab extends ConsumerWidget {
               decoration: InputDecoration(
                 labelText: 'Waga (${converter.unitLabel})', 
                 suffixText: converter.unitLabel,
+                border: const OutlineInputBorder(),
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
@@ -286,12 +289,12 @@ class _HomeTab extends ConsumerWidget {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text('Witaj z powrotem!', style: textTheme.headlineMedium),
-            Text('Gotowy na trening?', style: textTheme.bodyLarge),
+            Text('Witaj z powrotem!', style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+            Text('Gotowy na trening?', style: textTheme.bodyLarge?.copyWith(color: Colors.grey)),
             
             const SizedBox(height: 24),
-            Text('TWOJA AKTYWNOŚĆ', style: textTheme.labelLarge),
-            const SizedBox(height: 8),
+            Text('TWOJA AKTYWNOŚĆ', style: textTheme.labelLarge?.copyWith(letterSpacing: 1.0)),
+            const SizedBox(height: 12),
 
             Row(
               children: [
@@ -306,16 +309,18 @@ class _HomeTab extends ConsumerWidget {
             ),
 
             const SizedBox(height: 24),
-            Text('DZISIEJSZY TRENING', style: textTheme.labelLarge),
-            const SizedBox(height: 8),
+            Text('DZISIEJSZY TRENING', style: textTheme.labelLarge?.copyWith(letterSpacing: 1.0)),
+            const SizedBox(height: 12),
             if (todaysWorkout != null)
               _buildTodayWorkoutCard(context, todaysWorkout, unitSystem)
             else
-              const Card(
-                child: ListTile(
+              Card(
+                elevation: 0,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                child: const ListTile(
                   leading: Icon(Icons.coffee_outlined),
                   title: Text('Dzień wolny'),
-                  subtitle: Text('Brak zaplanowanego treningu na dzisiaj.'),
+                  subtitle: Text('Odpocznij i zregeneruj siły!'),
                 ),
               ),
           ],
@@ -327,61 +332,50 @@ class _HomeTab extends ConsumerWidget {
   Widget _buildActivityCard(BuildContext context, AsyncValue<int> asyncSteps, int stepGoal) {
     final theme = Theme.of(context);
     return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Row(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: 40,
-              height: 40,
-              child: asyncSteps.when(
-                data: (steps) {
-                  final progress = (stepGoal > 0 ? (steps / stepGoal) : 0.0).clamp(0.0, 1.0);
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CircularProgressIndicator(
-                        value: progress,
-                        strokeWidth: 4,
-                        backgroundColor: theme.colorScheme.surfaceVariant,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const Icon(Icons.directions_walk, size: 20)
-                    ],
-                  );
-                },
-                loading: () => CircularProgressIndicator(
-                  strokeWidth: 4,
-                  backgroundColor: theme.colorScheme.surfaceVariant,
-                ),
-                error: (_, __) => Icon(Icons.error_outline,
-                    color: theme.colorScheme.error, size: 24),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                 Icon(Icons.directions_walk, color: theme.colorScheme.primary),
+                 asyncSteps.when(
+                  data: (steps) {
+                     final progress = (stepGoal > 0 ? (steps / stepGoal) : 0.0).clamp(0.0, 1.0);
+                     return SizedBox(
+                       width: 24, height: 24,
+                       child: CircularProgressIndicator(
+                         value: progress,
+                         strokeWidth: 3,
+                         backgroundColor: theme.colorScheme.surfaceDim,
+                       ),
+                     );
+                  },
+                  loading: () => const SizedBox(),
+                  error: (_,__) => const Icon(Icons.error, size: 16, color: Colors.red),
+                 )
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: asyncSteps.when(
+            const SizedBox(height: 12),
+            const Text('Kroki', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            asyncSteps.when(
                 data: (steps) => Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text('$steps', style: theme.textTheme.headlineSmall),
-                    ),
-                    // --- POPRAWKA 1: Wyświetlanie celu ---
-                    Text('/ $stepGoal', 
-                      style: TextStyle(
-                        fontSize: 12, 
-                        color: theme.colorScheme.onSurfaceVariant
-                      )
-                    ),
+                    Text('$steps', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                    Text('/ $stepGoal', style: TextStyle(fontSize: 12, color: theme.colorScheme.outline)),
                   ],
                 ),
                 loading: () => const Text('...'),
-                error: (_, __) => const Text('Błąd', style: TextStyle(fontSize: 12)),
+                error: (_, __) => const Text('--'),
               ),
-            ),
           ],
         ),
       ),
@@ -393,47 +387,46 @@ class _HomeTab extends ConsumerWidget {
     
     final String displayWeight = latestWeightKg != null
         ? converter.displayWeight(latestWeightKg).toString()
-        : '-';
+        : '--';
 
     return Card(
+      elevation: 0,
+      color: theme.colorScheme.primaryContainer,
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: InkWell(
-        onTap: () {
-          _showLogWeightDialog(context, ref, converter); 
-        },
+        onTap: () => _showLogWeightDialog(context, ref, converter),
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Row(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.monitor_weight_outlined, 
-                  color: theme.colorScheme.onPrimaryContainer, size: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(Icons.monitor_weight_outlined, color: theme.colorScheme.onPrimaryContainer),
+                  Icon(Icons.add_circle, color: theme.colorScheme.onPrimaryContainer),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 12),
+              Text('Waga', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer)),
+              const SizedBox(height: 4),
+              RichText(
+                text: TextSpan(
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold, 
+                    color: theme.colorScheme.onPrimaryContainer
+                  ),
                   children: [
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        '$displayWeight${converter.unitLabel}', 
-                        style: theme.textTheme.headlineSmall,
-                      ),
+                    TextSpan(text: displayWeight),
+                    TextSpan(
+                      text: ' ${converter.unitLabel}',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
                     ),
-                    const Text('Waga', style: TextStyle(fontSize: 12)),
                   ],
                 ),
               ),
-              // --- POPRAWKA 2: Dodanie "plusika" na końcu ---
-              Icon(Icons.add, color: theme.colorScheme.primary),
+              const Text(' ', style: TextStyle(fontSize: 12)), 
             ],
           ),
         ),
@@ -442,61 +435,97 @@ class _HomeTab extends ConsumerWidget {
   }
 
   Widget _buildTodayWorkoutCard(BuildContext context, Map workout, String unitSystem) {
-     final title = (workout['day'] ?? workout['block'] ?? 'Trening').toString();
+    final title = (workout['day'] ?? workout['block'] ?? 'Trening').toString();
     final exercises = (workout['exercises'] as List?) ?? [];
-    return Card(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(color: Theme.of(context).colorScheme.onPrimaryContainer),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${exercises.length} ćwiczeń do wykonania:',
-              style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
-            ),
-            const SizedBox(height: 12),
-            ...exercises.take(3).map((e) => Text(
-                  '• ${(e as Map)['name']}',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
-                  overflow: TextOverflow.ellipsis,
-                )),
-            if (exercises.length > 3)
-              Text('• ...i ${exercises.length - 3} więcej',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer)),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.tonal(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ActiveWorkoutScreen(
-                        workout: workout,
-                        unitSystem: unitSystem,
-                      ),
-                    ),
-                  );
-                },
-                child: const Text('Rozpocznij'),
-              ),
-            )
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.tertiary,
           ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${exercises.length} Ćwiczeń',
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const Icon(Icons.arrow_forward, color: Colors.white70),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            exercises.take(3).map((e) => (e as Map)['name']).join(', ') + 
+            (exercises.length > 3 ? '...' : ''),
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ActiveWorkoutScreen(
+                      workout: workout,
+                      unitSystem: unitSystem,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Rozpocznij', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
-
 
 class _StatsTab extends ConsumerWidget {
   const _StatsTab();
@@ -512,6 +541,7 @@ class _StatsTab extends ConsumerWidget {
         );
     
     final converter = UnitConverter(unitSystem: unitSystem);
+    final theme = Theme.of(context);
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -519,129 +549,177 @@ class _StatsTab extends ConsumerWidget {
         ref.refresh(weightHistoryProvider);
       },
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         children: [
-          Text('Twoja Waga', style: Theme.of(context).textTheme.titleLarge),
+          Text('Twoja Waga', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          SizedBox(
-            height: 250,
+          
+          // --- WYKRES WAGI Z POPRAWKĄ DUBLUJĄCYCH SIĘ ETYKIET ---
+          Container(
+            height: 300,
+            padding: const EdgeInsets.fromLTRB(8, 24, 24, 10), // Mniejszy padding z lewej
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(24),
+            ),
             child: asyncWeightHistory.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => const Center(child: Text('Błąd wykresu')),
               data: (history) {
                 if (history.isEmpty) {
-                  return const Center(child: Text('Brak pomiarów wagi.'));
+                  return const Center(child: Text('Brak pomiarów wagi.', style: TextStyle(color: Colors.grey)));
                 }
                 
-                // 1. Grupowanie po dacie (żeby mieć 1 punkt na dzień)
-                final Map<String, dynamic> uniqueHistory = {};
-                for (final entry in history) {
-                  final rawDate = DateTime.parse(entry['date_logged'].toString());
-                  final dateKey = DateFormat('yyyy-MM-dd').format(rawDate);
-                  uniqueHistory[dateKey] = entry;
-                }
-
-                // 2. Sortowanie i przygotowanie prostej listy
-                final sortedEntries = uniqueHistory.values.toList();
-                sortedEntries.sort((a, b) {
-                  final dateA = DateTime.parse(a['date_logged'].toString());
-                  final dateB = DateTime.parse(b['date_logged'].toString());
-                  return dateA.compareTo(dateB);
+                final sortedHistory = List.from(history);
+                sortedHistory.sort((a, b) {
+                  final da = DateTime.parse(a['date_logged'].toString());
+                  final db = DateTime.parse(b['date_logged'].toString());
+                  return da.compareTo(db);
                 });
 
-                // 3. Tworzenie punktów: X to po prostu INDEX (0, 1, 2...), a nie czas
                 final spots = <FlSpot>[];
-                for (int i = 0; i < sortedEntries.length; i++) {
-                  final entry = sortedEntries[i];
-                  final weightKg = double.tryParse(entry['weight'].toString()) ?? 0.0;
-                  final displayWeight = converter.displayWeight(weightKg);
-                  spots.add(FlSpot(i.toDouble(), displayWeight));
+                double minWeight = double.infinity;
+                double maxWeight = double.negativeInfinity;
+
+                final Map<String, double> dailyWeights = {};
+                for (final entry in sortedHistory) {
+                   final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.parse(entry['date_logged'].toString()));
+                   final w = double.tryParse(entry['weight'].toString()) ?? 0.0;
+                   if (w > 0) dailyWeights[dateStr] = w;
+                }
+                
+                final days = dailyWeights.keys.toList();
+                
+                if (days.isEmpty) return const Center(child: Text('Brak poprawnych danych.'));
+
+                for (int i = 0; i < days.length; i++) {
+                  final date = days[i];
+                  final weightKg = dailyWeights[date]!;
+                  final val = converter.displayWeight(weightKg);
+                  
+                  if (val < minWeight) minWeight = val;
+                  if (val > maxWeight) maxWeight = val;
+
+                  spots.add(FlSpot(i.toDouble(), val));
                 }
 
-                if (spots.isEmpty) return const Center(child: Text('Brak danych.'));
+                // Logika skali: jeśli różnica jest mała, pokazujemy z dokładnością do 1 miejsca
+                double minY, maxY;
+                final weightDiff = maxWeight - minWeight;
+                final isSmallRange = weightDiff < 5.0;
 
-                // --- UPROSZCZONY WYKRES ---
-                return Padding(
-                  // Dodajemy padding po bokach, żeby skrajne daty nie były ucięte
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: LineChart(
-                    LineChartData(
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false, // Tylko poziome linie
-                        horizontalInterval: 5,   // Linie co 5 kg/lbs
+                if (weightDiff == 0) {
+                   minY = minWeight - 2;
+                   maxY = maxWeight + 2;
+                } else {
+                   minY = (minWeight - (weightDiff * 0.2)).floorToDouble();
+                   maxY = (maxWeight + (weightDiff * 0.2)).ceilToDouble();
+                }
+                if (minY < 0) minY = 0;
+
+                return LineChart(
+                  LineChartData(
+                    minY: minY,
+                    maxY: maxY,
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      getDrawingHorizontalLine: (value) => FlLine(
+                        color: theme.colorScheme.onSurface.withOpacity(0.1),
+                        strokeWidth: 1,
                       ),
-                      titlesData: FlTitlesData(
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 40,
-                            getTitlesWidget: (val, meta) {
-                              // Pokazuj tylko całe liczby na osi Y
-                              if (val == val.toInt().toDouble()) {
-                                return Text(
-                                  val.toInt().toString(), 
-                                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            },
-                          ),
-                        ),
-                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            // Interwał 1 oznacza: podpisz każdy punkt
-                            // (Jeśli punktów będzie bardzo dużo, można tu dać logikę np. interval: spots.length > 5 ? 2 : 1)
-                            interval: spots.length > 6 ? (spots.length / 5).ceilToDouble() : 1,
-                            getTitlesWidget: (val, meta) {
-                              final index = val.toInt();
-                              // Zabezpieczenie przed wyjściem poza zakres
-                              if (index < 0 || index >= sortedEntries.length) {
-                                return const SizedBox.shrink();
-                              }
-                              
-                              final entry = sortedEntries[index];
-                              final date = DateTime.parse(entry['date_logged'].toString());
-                              
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Text(
-                                  DateFormat('dd.MM').format(date),
-                                  style: const TextStyle(fontSize: 10),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: spots,
-                          isCurved: false, // Proste linie są czytelniejsze przy małej ilości danych
-                          color: Theme.of(context).colorScheme.primary,
-                          barWidth: 3,
-                          dotData: FlDotData(
-                            show: true,
-                            getDotPainter: (spot, percent, barData, index) {
-                              return FlDotCirclePainter(
-                                radius: 4,
-                                color: Theme.of(context).colorScheme.primary,
-                                strokeWidth: 2,
-                                strokeColor: Colors.black, // Kontrastowa obwódka
-                              );
-                            },
-                          ),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
-                          ),
-                        ),
-                      ],
                     ),
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 46, // Więcej miejsca na etykiety z przecinkiem
+                          interval: isSmallRange ? (maxY - minY) / 4 : (maxY - minY) / 5,
+                          getTitlesWidget: (val, meta) {
+                             if (val == minY || val == maxY) return const SizedBox.shrink(); // Ukryj skrajne by nie ucinało
+                             
+                             // Jeśli zakres jest mały, używaj 1 miejsca po przecinku
+                             if (isSmallRange) {
+                               return Text(
+                                 val.toStringAsFixed(1),
+                                 style: TextStyle(fontSize: 10, color: theme.colorScheme.outline),
+                               );
+                             }
+                             // Standardowo liczby całkowite
+                             return Text(
+                               val.toStringAsFixed(0),
+                               style: TextStyle(fontSize: 10, color: theme.colorScheme.outline),
+                             );
+                          },
+                        ),
+                      ),
+                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 30,
+                          interval: spots.length > 5 ? (spots.length / 4).ceilToDouble() : 1,
+                          getTitlesWidget: (val, meta) {
+                            final index = val.toInt();
+                            if (index < 0 || index >= days.length) return const SizedBox.shrink();
+                            
+                            final date = DateTime.parse(days[index]);
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                DateFormat('d MMM', 'pl_PL').format(date),
+                                style: TextStyle(fontSize: 10, color: theme.colorScheme.outline),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    lineTouchData: LineTouchData(
+                      touchTooltipData: LineTouchTooltipData(
+                        getTooltipColor: (spot) => theme.colorScheme.surface,
+                        tooltipRoundedRadius: 8,
+                        getTooltipItems: (touchedSpots) {
+                          return touchedSpots.map((spot) {
+                            return LineTooltipItem(
+                              '${spot.y} ${converter.unitLabel}',
+                              TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                            );
+                          }).toList();
+                        },
+                      ),
+                    ),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: spots,
+                        isCurved: true,
+                        color: theme.colorScheme.primary,
+                        barWidth: 3,
+                        isStrokeCapRound: true,
+                        dotData: FlDotData(
+                          show: true,
+                          getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                            radius: 4,
+                            color: theme.colorScheme.surface,
+                            strokeWidth: 3,
+                            strokeColor: theme.colorScheme.primary,
+                          ),
+                        ),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          gradient: LinearGradient(
+                            colors: [
+                              theme.colorScheme.primary.withOpacity(0.3),
+                              theme.colorScheme.primary.withOpacity(0.0),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -650,16 +728,16 @@ class _StatsTab extends ConsumerWidget {
 
           const SizedBox(height: 32),
 
-          Text('Historia Treningów', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
+          Text('Historia Treningów', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
           
           asyncLogs.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
             error: (e, _) => Center(
-              child: FilledButton.icon(
+              child: TextButton.icon(
                 onPressed: () => ref.refresh(workoutLogsProvider),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Odśwież historię'),
+                icon: const Icon(Icons.refresh, color: Colors.grey),
+                label: const Text('Odśwież', style: TextStyle(color: Colors.grey)),
               ),
             ),
             data: (logs) {
@@ -668,29 +746,44 @@ class _StatsTab extends ConsumerWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: logs.length,
-                separatorBuilder: (_,__) => const Divider(),
+                separatorBuilder: (_,__) => const SizedBox(height: 8),
                 itemBuilder: (ctx, i) {
                   final log = logs[i] as Map;
                   final logId = log['id'] as int;
                   final name = log['plan_name'] ?? 'Trening';
                   final date = DateTime.parse(log['date_completed'].toString());
                   
-                  return ListTile(
-                    leading: const Icon(Icons.fitness_center),
-                    title: Text(name),
-                    subtitle: Text(DateFormat('EEE, d MMM yyyy', 'pl_PL').format(date)),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => WorkoutDetailsScreen(
-                            logId: logId,
-                            planName: name.toString(),
-                            unitSystem: unitSystem,
-                          ),
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.secondaryContainer,
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      );
-                    },
+                        child: Icon(Icons.check, color: theme.colorScheme.onSecondaryContainer),
+                      ),
+                      title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(DateFormat('EEEE, d MMM yyyy', 'pl_PL').format(date)),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => WorkoutDetailsScreen(
+                              logId: logId,
+                              planName: name.toString(),
+                              unitSystem: unitSystem,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   );
                 },
               );
@@ -701,6 +794,9 @@ class _StatsTab extends ConsumerWidget {
     );
   }
 }
+
+// --- PLAN TAB ---
+
 class _PlanTab extends ConsumerStatefulWidget {
   final FutureProvider<Map<String, dynamic>?> planProvider;
   const _PlanTab({required this.planProvider});
