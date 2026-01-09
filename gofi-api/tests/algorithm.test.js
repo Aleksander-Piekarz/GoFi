@@ -1,41 +1,56 @@
-const controller = require('../controllers/questionnaireController');
-const { validateAnswers, pickSplit, suggestReps } = controller.helpers;
+const algorithm = require("../lib/algorithm");
 
-describe('Algorytm Personalizacji (Logic Only)', () => {
+const { validateAnswers, pickSplit, configureVolume } = algorithm.helpers;
 
-  test('Powinien odrzucić niekompletną ankietę', () => {
-    const badAnswers = { goal: 'mass' }; // Brakuje dni, doświadczenia itp.
+describe("Algorytm Personalizacji (Logic Only)", () => {
+  test("Powinien odrzucić niekompletną ankietę", () => {
+    const badAnswers = { goal: "mass" };
     const errors = validateAnswers(badAnswers);
+
     expect(errors.length).toBeGreaterThan(0);
-    expect(errors).toContain('days_per_week out of range (2–7)');
+
+    expect(errors).toContain("Missing days");
   });
 
-  test('Powinien dobrać split FBW dla 2 dni treningowych', () => {
-    const split = pickSplit('mass', 2);
-    expect(split.name).toContain('Full Body Workout');
+  test("Powinien dobrać split FBW dla 2 dni treningowych", () => {
+    const split = pickSplit("mass", 2);
+    expect(split.name).toContain("Full Body Workout");
     expect(split.schedule.length).toBe(2);
   });
 
   test('Powinien dobrać split PPL dla 3 dni i celu "mass"', () => {
-    const split = pickSplit('mass', 3);
-    expect(split.name).toContain('Push/Pull/Legs');
+    const split = pickSplit("mass", 3);
+    expect(split.name).toContain("Push/Pull/Legs");
   });
 
   test('Powinien dobrać split FBW dla 3 dni i celu "reduction" (logika biznesowa)', () => {
-    // Zgodnie z Twoją logiką: reduction + 3 dni = FBW_3, a mass + 3 dni = PPL_3
-    const split = pickSplit('reduction', 3);
-    expect(split.name).toContain('Full Body Workout');
+    const split = pickSplit("reduction", 3);
+    expect(split.name).toContain("Full Body Workout");
   });
 
-  test('Powinien sugerować zakres powtórzeń 6-8 dla siły/masy w przysiadach', () => {
-    // (goal, pattern, intensity, experience)
-    const reps = suggestReps('mass', 'squat', 'high', 'intermediate');
-    expect(reps).toBe('5–8');
+  test("Powinien sugerować zakres powtórzeń 6-8 dla siły/masy w ćwiczeniach złożonych", () => {
+    const mockCompound = {
+      code: "squat",
+      mechanics: "compound",
+      difficulty: 3,
+    };
+
+    const result = configureVolume(mockCompound, "intermediate", "mass");
+
+    expect(result.reps).toBe("6-8");
+    expect(result.sets).toBe(4);
   });
 
-  test('Powinien sugerować zakres 10-15 dla redukcji', () => {
-    const reps = suggestReps('reduction', 'push_h', 'medium', 'beginner');
-    expect(reps).toBe('10–15');
-  });
+  test("Powinien sugerować zakres 10-12 dla początkującego na redukcji", () => {
+    const mockExercise = {
+      code: "dummy_push",
+      mechanics: "isolation",
+      difficulty: 1,
+    };
 
+    const result = configureVolume(mockExercise, "beginner", "reduction");
+
+    expect(result.reps).toBe("10-12");
+  });
 });
+

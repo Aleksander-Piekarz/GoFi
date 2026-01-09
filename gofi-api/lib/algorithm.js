@@ -314,5 +314,10 @@ function generateProgressionModel(level) {
 module.exports = {
     QUESTIONS,
     validateAnswers,
-    generateAdvancedPlan
+    generateAdvancedPlan,
+    helpers: {
+        validateAnswers,
+        pickSplit,
+        configureVolume
+    }
 };
