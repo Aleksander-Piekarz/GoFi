@@ -4,10 +4,16 @@ const { auth } = require('../middleware/auth');
 const ctrl = require('../controllers/exerciseController');
 const { pool } = require('../lib/db'); 
 
+// Pobierz listę wszystkich ćwiczeń (z filtrowaniem i paginacją)
+router.get('/', auth(true), ctrl.getAllExercises);
 
+// Pobierz unikalne partie mięśniowe
+router.get('/muscles', auth(true), ctrl.getMuscleGroups);
 
+// Pobierz unikalne typy sprzętu
+router.get('/equipment', auth(true), ctrl.getEquipmentTypes);
 
-
+// Wyszukiwanie ćwiczeń (stara wersja dla kompatybilności)
 router.get('/search', auth(true), async (req,res) => {
   const { pattern, muscle, equip, loc } = req.query;
   const where = [];
@@ -22,7 +28,7 @@ router.get('/search', auth(true), async (req,res) => {
   if (equip)   { where.push('FIND_IN_SET(?, equipment)'); args.push(equip); }
   if (loc)     { where.push('FIND_IN_SET(?, location)'); args.push(loc); }
 
-  const sql = `SELECT code,name,primary_muscle,pattern,equipment,location,difficulty FROM exercises` +
+  const sql = `SELECT code, name_en, name_pl, primary_muscle, pattern, equipment, location, difficulty FROM exercises` +
               (where.length ? ` WHERE ${where.join(' AND ')}` : '') + ` LIMIT 100`;
   
   
@@ -30,6 +36,10 @@ router.get('/search', auth(true), async (req,res) => {
   res.json(rows);
 });
 
+// Pobierz pełne dane ćwiczenia po kodzie
+router.get('/:code', auth(true), ctrl.getExerciseByCode);
+
+// Pobierz alternatywy dla ćwiczenia
 router.get('/:code/alternatives', auth(true), ctrl.getAlternatives);
 
 module.exports = router;

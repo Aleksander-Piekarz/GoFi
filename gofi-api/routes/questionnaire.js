@@ -11,5 +11,6 @@ router.post('/answers', auth(true), ctrl.saveAnswers);
 router.get('/plan/latest', auth(true), ctrl.getLatestPlan);
 
 router.post('/submit', auth(true), ctrl.submitAnswers);
+router.post('/plan/custom', auth(true), ctrl.saveCustomPlan);
 
 module.exports = router;

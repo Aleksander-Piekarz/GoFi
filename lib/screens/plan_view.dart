@@ -2,8 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../utils/converters.dart';
 import '../services/api/providers.dart';
+
+/// Helper do wyciągnięcia nazwy ćwiczenia (obsługuje różne formaty)
+String _getExerciseName(dynamic exercise, [String lang = 'pl']) {
+  if (exercise == null) return 'Nieznane';
+  if (exercise is String) return exercise;
+  if (exercise is Map) {
+    final name = exercise['name'];
+    if (name is String) return name;
+    if (name is Map) {
+      return name[lang]?.toString() ?? name['en']?.toString() ?? name['pl']?.toString() ?? 'Nieznane';
+    }
+    return exercise['name_$lang']?.toString() ?? 
+           exercise['name_en']?.toString() ?? 
+           exercise['name_pl']?.toString() ?? 
+           exercise['code']?.toString() ?? 
+           'Nieznane';
+  }
+  return exercise.toString();
+}
 
 typedef OnExerciseChanged = void Function(
   int dayIndex,
@@ -222,7 +240,7 @@ class PlanView extends ConsumerWidget {
     int exerciseIndex,
     bool isEditable,
   ) {
-    final name = exercise['name']?.toString() ?? 'Nieznane ćwiczenie';
+    final name = _getExerciseName(exercise);
     final sets = exercise['sets']?.toString() ?? '0';
     final reps = exercise['reps']?.toString() ?? '0';
     
@@ -449,7 +467,7 @@ class PlanView extends ConsumerWidget {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                activeExercise['name'],
+                                _getExerciseName(activeExercise),
                                 style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                               ),
                             ),
@@ -476,7 +494,7 @@ class PlanView extends ConsumerWidget {
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.swap_horiz, color: Colors.grey),
-                            title: Text(alt['name'], style: const TextStyle(color: Colors.white70)),
+                            title: Text(_getExerciseName(alt), style: const TextStyle(color: Colors.white70)),
                             subtitle: Text(
                               'Sprzęt: ${(alt['equipment'] as List?)?.join(", ") ?? "-"}',
                               style: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -494,7 +512,7 @@ class PlanView extends ConsumerWidget {
                            ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.undo, color: Colors.orangeAccent),
-                            title: Text('Przywróć: ${currentExercise['name']}', style: const TextStyle(color: Colors.orangeAccent)),
+                            title: Text('Przywróć: ${_getExerciseName(currentExercise)}', style: const TextStyle(color: Colors.orangeAccent)),
                             onTap: () {
                               setDialogState(() {
                                 selectedAlternative = null; // Reset do oryginału

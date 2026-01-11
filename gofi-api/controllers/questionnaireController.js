@@ -1,26 +1,101 @@
 const { pool } = require("../lib/db");
 const algorithm = require("../lib/algorithm"); // Importujemy nasz nowy moduł
+const fs = require('fs');
+const path = require('path');
+
+// Ścieżki do plików JSON z ćwiczeniami (fallback gdy baza niedostępna)
+const EXERCISES_JSON_PATHS = [
+    path.join(__dirname, '../data/exercises_final.json'),
+    path.join(__dirname, '../data/exercises.json')
+];
 
 // Helper do pobrania wszystkich ćwiczeń (potrzebne dla algorytmu)
 async function getAllExercises(poolPromise) {
-    const sql = `
-      SELECT 
-        code, name, primary_muscle, secondary_muscles, pattern, 
-        equipment, location, difficulty, unilateral, is_machine, 
-        minutes_est, description, video_url,
-        mechanics, excluded_injuries
-      FROM exercises
-    `;
-    const [rows] = await poolPromise.query(sql);
+    // Próbuj najpierw z bazy danych
+    try {
+        const sql = `
+          SELECT 
+            code, name_en, name_pl, primary_muscle, secondary_muscles, pattern, 
+            equipment, location, difficulty, unilateral, is_machine, 
+            minutes_est, instructions_en, instructions_pl, video_url,
+            mechanics, safety_data
+          FROM exercises
+        `;
+        const [rows] = await poolPromise.query(sql);
+        
+        if (rows.length > 0) {
+            console.log(`Załadowano ${rows.length} ćwiczeń z bazy danych`);
+            // Parsowanie danych z bazy (stringi 'a,b,c' na tablice ['a','b','c'])
+            return rows.map(ex => {
+                // Parsuj safety_data JSON aby wyciągnąć excluded_injuries
+                let excludedInjuries = [];
+                if (ex.safety_data) {
+                    try {
+                        const safety = JSON.parse(ex.safety_data);
+                        excludedInjuries = safety.excluded_injuries || [];
+                    } catch (e) { /* ignore parse errors */ }
+                }
+                return {
+                    ...ex,
+                    name: ex.name_en || ex.name_pl, // Kompatybilność wsteczna
+                    description: ex.instructions_en || ex.instructions_pl,
+                    equipment: ex.equipment ? ex.equipment.split(',') : [],
+                    location: ex.location ? ex.location.split(',') : [],
+                    excluded_injuries: excludedInjuries,
+                    difficulty: parseInt(ex.difficulty) || 2
+                };
+            });
+        }
+    } catch (dbError) {
+        console.warn('Baza danych niedostępna, próbuję załadować z JSON:', dbError.code);
+    }
     
-    // Parsowanie danych z bazy (stringi 'a,b,c' na tablice ['a','b','c'])
-    return rows.map(ex => ({
-        ...ex,
-        equipment: ex.equipment ? ex.equipment.split(',') : [],
-        location: ex.location ? ex.location.split(',') : [],
-        excluded_injuries: ex.excluded_injuries ? ex.excluded_injuries.split(',') : [],
-        difficulty: parseInt(ex.difficulty) || 2
-    }));
+    // Fallback: ładuj z pliku JSON
+    return loadExercisesFromJson();
+}
+
+// Ładuje ćwiczenia z pliku JSON
+function loadExercisesFromJson() {
+    for (const jsonPath of EXERCISES_JSON_PATHS) {
+        try {
+            if (fs.existsSync(jsonPath)) {
+                const data = fs.readFileSync(jsonPath, 'utf8');
+                const exercises = JSON.parse(data);
+                console.log(`Załadowano ${exercises.length} ćwiczeń z JSON: ${path.basename(jsonPath)}`);
+                
+                // Normalizuj dane z JSON do formatu oczekiwanego przez algorytm
+                return exercises.map(ex => ({
+                    ...ex,
+                    name: ex.name || ex.name_en || ex.name_pl,
+                    name_en: ex.name_en || ex.name,
+                    name_pl: ex.name_pl || ex.name,
+                    description: ex.description || ex.instructions_en || ex.instructions_pl,
+                    // Normalizacja equipment - może być string lub tablica
+                    equipment: normalizeToArray(ex.equipment),
+                    // Normalizacja location - może być string, tablica lub undefined
+                    location: normalizeToArray(ex.location, ['gym', 'home']), // domyślnie wszędzie
+                    excluded_injuries: ex.excluded_injuries || ex.safety?.excluded_injuries || [],
+                    difficulty: parseInt(ex.difficulty) || 2,
+                    pattern: ex.pattern || 'accessory'
+                }));
+            }
+        } catch (err) {
+            console.warn(`Nie udało się załadować ${jsonPath}:`, err.message);
+        }
+    }
+    console.error('Nie znaleziono żadnego pliku z ćwiczeniami!');
+    return [];
+}
+
+// Normalizuje wartość do tablicy
+function normalizeToArray(value, defaultValue = []) {
+    if (!value) return defaultValue;
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+        // Obsłuż różne formaty: "gym,home" lub "body weight" itp.
+        return value.split(',').map(s => s.trim().toLowerCase());
+    }
+    return defaultValue;
 }
 
 // Helper do historii ciężarów
@@ -74,11 +149,13 @@ exports.submitAnswers = async (req, res) => {
 
         const userProfile = {
             experience: answers.experience || 'beginner',
-            daysPerWeek: answers.days_per_week || 3,
+            daysPerWeek: parseInt(answers.days_per_week) || 3,
             injuries: answers.injuries || [],
             equipment: userEquipment,
             goal: answers.goal || 'recomposition',
-            location: answers.location || 'gym'
+            location: answers.location || 'gym',
+            preferredDays: answers.preferred_days || [], // Preferowane dni treningowe
+            sessionTime: parseInt(answers.session_time) || 60 // Czas sesji w minutach
         };
 
         // 3. Generowanie Planu (Logika CSCS)
@@ -148,3 +225,33 @@ exports.getLatestAnswers = async (req, res) => {
     }
 };
 
+// --- WŁASNY PLAN ---
+exports.saveCustomPlan = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: "Unauthorized" });
+        
+        const plan = req.body;
+        if (!plan || !plan.week || !Array.isArray(plan.week)) {
+            return res.status(400).json({ error: "Nieprawidłowy format planu" });
+        }
+
+        const poolPromise = pool.promise();
+
+        // Zapisz plan z flagą custom=true
+        const [pResult] = await poolPromise.query(
+            "INSERT INTO plans (user_id, source_questionnaire_id, plan_json, created_at) VALUES (?, NULL, ?, NOW())",
+            [userId, JSON.stringify({ ...plan, custom: true })]
+        );
+
+        res.json({
+            ok: true,
+            planId: pResult.insertId,
+            plan: plan
+        });
+
+    } catch (error) {
+        console.error("Błąd w saveCustomPlan:", error);
+        res.status(500).json({ error: "Błąd serwera." });
+    }
+};

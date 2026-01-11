@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/theme.dart';
 import '../services/api/providers.dart';
 import '../services/api/user_service.dart';
+import '../utils/language_settings.dart';
 import 'questionnaire_screen.dart';
 import 'starting_screen.dart';
 
@@ -198,11 +200,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final asyncProfile = ref.watch(userProfileProvider);
+    final lang = ref.watch(languageProvider);
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profil', style: textTheme.titleLarge),
+        title: Text(AppTranslations.get('profile', lang), style: textTheme.titleLarge),
         centerTitle: true,
       ),
       
@@ -330,26 +333,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const SizedBox(height: 16),
 
               // --- PREFERENCJE ---
-              Text('Preferencje', style: textTheme.titleSmall),
+              Text(lang == 'pl' ? 'Preferencje' : 'Preferences', style: textTheme.titleSmall),
               const SizedBox(height: 8),
               Card(
                 child: Column(
                   children: [
+                    // Wybór języka
+                    const LanguageSelector(),
+                    const Divider(height: 1),
+                    // Wybór motywu
+                    const ThemeSelector(),
+                    const Divider(height: 1),
                     ListTile(
                       leading: const Icon(Icons.directions_walk),
-                      title: const Text('Dzienny cel kroków'),
-                      subtitle: Text('$dailySteps kroków'),
+                      title: Text(AppTranslations.get('daily_steps', lang)),
+                      subtitle: Text('$dailySteps ${lang == 'pl' ? 'kroków' : 'steps'}'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => _editStepGoal(dailySteps),
                     ),
                     const Divider(height: 1),
                     ListTile(
                       leading: const Icon(Icons.straighten),
-                      title: const Text('Jednostki'),
+                      title: Text(AppTranslations.get('unit_system', lang)),
                       subtitle: Text(
                         unitSystem == 'metric'
-                            ? 'Metryczne (kg, cm)'
-                            : 'Imperialne (lb, ft)',
+                            ? AppTranslations.get('metric', lang)
+                            : AppTranslations.get('imperial', lang),
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => _pickUnits(unitSystem),
@@ -357,7 +366,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const Divider(height: 1),
                     SwitchListTile(
                       secondary: const Icon(Icons.notifications_active),
-                      title: const Text('Powiadomienia'),
+                      title: Text(lang == 'pl' ? 'Powiadomienia' : 'Notifications'),
                       value: notifEnabled,
                       onChanged: (v) => _toggleNotifications(v),
                     ),
@@ -401,6 +410,85 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+// === THEME SELECTOR WIDGET ===
+class ThemeSelector extends ConsumerWidget {
+  const ThemeSelector({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeProvider);
+    final lang = ref.watch(languageProvider);
+    
+    String getThemeLabel(ThemeMode mode) {
+      switch (mode) {
+        case ThemeMode.dark:
+          return lang == 'pl' ? 'Ciemny' : 'Dark';
+        case ThemeMode.light:
+          return lang == 'pl' ? 'Jasny' : 'Light';
+        case ThemeMode.system:
+          return lang == 'pl' ? 'Systemowy' : 'System';
+      }
+    }
+    
+    return ListTile(
+      leading: Icon(
+        themeMode == ThemeMode.dark 
+            ? Icons.dark_mode 
+            : themeMode == ThemeMode.light 
+                ? Icons.light_mode 
+                : Icons.brightness_auto,
+      ),
+      title: Text(lang == 'pl' ? 'Motyw' : 'Theme'),
+      subtitle: Text(getThemeLabel(themeMode)),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          showDragHandle: true,
+          builder: (_) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                RadioListTile<ThemeMode>(
+                  secondary: const Icon(Icons.dark_mode),
+                  title: Text(lang == 'pl' ? 'Ciemny' : 'Dark'),
+                  value: ThemeMode.dark,
+                  groupValue: themeMode,
+                  onChanged: (v) {
+                    ref.read(themeProvider.notifier).setTheme(v!);
+                    Navigator.pop(context);
+                  },
+                ),
+                RadioListTile<ThemeMode>(
+                  secondary: const Icon(Icons.light_mode),
+                  title: Text(lang == 'pl' ? 'Jasny' : 'Light'),
+                  value: ThemeMode.light,
+                  groupValue: themeMode,
+                  onChanged: (v) {
+                    ref.read(themeProvider.notifier).setTheme(v!);
+                    Navigator.pop(context);
+                  },
+                ),
+                RadioListTile<ThemeMode>(
+                  secondary: const Icon(Icons.brightness_auto),
+                  title: Text(lang == 'pl' ? 'Systemowy' : 'System'),
+                  value: ThemeMode.system,
+                  groupValue: themeMode,
+                  onChanged: (v) {
+                    ref.read(themeProvider.notifier).setTheme(v!);
+                    Navigator.pop(context);
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -91,4 +91,16 @@ class QuestionnaireService {
     }
     return null;
   }
+
+  // --- WŁASNY PLAN ---
+  Future<Map<String, dynamic>> saveCustomPlan(Map<String, dynamic> plan) async {
+    final res = await _api.post('/questionnaire/plan/custom', body: plan);
+    final obj = res['data'] ?? res;
+    final savedPlan = Map<String, dynamic>.from(obj as Map);
+    
+    // Zapisujemy w cache
+    await _cachePlan(plan);
+    
+    return savedPlan;
+  }
 }

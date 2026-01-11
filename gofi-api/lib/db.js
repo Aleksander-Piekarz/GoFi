@@ -11,9 +11,7 @@ const dbConfig = {
   queueLimit: 0
 };
 
-// ⭐️ KLUCZOWA POPRAWKA ⭐️
-// Dodaj port do konfiguracji TYLKO WTEDY, 
-// gdy DB_PORT jest zdefiniowany w pliku .env
+
 if (process.env.DB_PORT) {
   dbConfig.port = Number(process.env.DB_PORT);
   console.log(`Łączę z bazą danych używając portu: ${dbConfig.port}`);

@@ -7,13 +7,17 @@ import 'package:gofi/screens/starting_screen.dart';
 import 'package:pedometer/pedometer.dart';
 import 'package:device_info_plus/device_info_plus.dart'; 
 import 'package:intl/intl.dart'; 
+import '../app/theme.dart';
 import '../utils/converters.dart';
+import '../utils/language_settings.dart';
 import 'profile_screen.dart';
 import 'plan_view.dart';
 import 'questionnaire_screen.dart';
+import 'custom_plan_builder_screen.dart';
 import '../services/api/providers.dart'; 
 import 'active_workout_screen.dart';
 import 'workout_details_screen.dart'; 
+import 'exercise_library_screen.dart'; 
 
 // --- PROVIDERS ---
 
@@ -64,6 +68,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final lang = ref.watch(languageProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -71,6 +76,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         title: const Text('GoFi', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
         centerTitle: true,
         actions: [
+          const LanguageSwitch(showLabel: false),
+          const SizedBox(width: 4),
           IconButton(
             icon: const CircleAvatar(
               radius: 16,
@@ -92,26 +99,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _HomeTab(planProvider: planProvider),
           const _StatsTab(),
           _PlanTab(planProvider: planProvider),
+          const ExerciseLibraryScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: AppTranslations.get('home', lang),
           ),
           NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: 'Statystyki',
+            icon: const Icon(Icons.bar_chart_outlined),
+            selectedIcon: const Icon(Icons.bar_chart),
+            label: AppTranslations.get('statistics', lang),
           ),
           NavigationDestination(
-            icon: Icon(Icons.fitness_center_outlined),
-            selectedIcon: Icon(Icons.fitness_center),
-            label: 'Plan',
+            icon: const Icon(Icons.fitness_center_outlined),
+            selectedIcon: const Icon(Icons.fitness_center),
+            label: AppTranslations.get('plan', lang),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.library_books_outlined),
+            selectedIcon: const Icon(Icons.library_books),
+            label: AppTranslations.get('library', lang),
           ),
         ],
       ),
@@ -502,9 +515,12 @@ class _HomeTab extends ConsumerWidget {
             height: 48,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Theme.of(context).colorScheme.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                backgroundColor: Colors.black.withOpacity(0.3),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: const BorderSide(color: Colors.white30),
+                ),
                 elevation: 0,
               ),
               onPressed: () {
@@ -911,10 +927,61 @@ class _PlanTabState extends ConsumerState<_PlanTab> {
             _editablePlan = null;
             return ref.refresh(widget.planProvider);
           },
-          child: PlanView(
-            plan: _editablePlan!,
-            onExerciseChanged: _updateExercise,
-            unitSystem: unitSystem,
+          child: Column(
+            children: [
+              // Przyciski akcji
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.refresh, size: 18, color: Colors.white),
+                        label: const Text('Nowa ankieta', style: TextStyle(color: Colors.white)),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          side: const BorderSide(color: Colors.white38),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const QuestionnaireScreen()),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton.icon(
+                        icon: const Icon(Icons.build, size: 18),
+                        label: const Text('Stwórz własny'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const CustomPlanBuilderScreen()),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Plan view
+              Expanded(
+                child: PlanView(
+                  plan: _editablePlan!,
+                  onExerciseChanged: _updateExercise,
+                  unitSystem: unitSystem,
+                ),
+              ),
+            ],
           ),
         );
       },
