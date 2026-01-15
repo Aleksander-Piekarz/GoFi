@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../services/api/providers.dart';
+import '../utils/language_settings.dart';
+import 'exercise_detail_screen.dart';
 
 /// Helper do wyciągnięcia nazwy ćwiczenia (obsługuje różne formaty)
 String _getExerciseName(dynamic exercise, [String lang = 'pl']) {
@@ -240,14 +241,14 @@ class PlanView extends ConsumerWidget {
     int exerciseIndex,
     bool isEditable,
   ) {
-    final name = _getExerciseName(exercise);
+    final lang = ref.watch(languageProvider);
+    final name = _getExerciseName(exercise, lang);
     final sets = exercise['sets']?.toString() ?? '0';
     final reps = exercise['reps']?.toString() ?? '0';
+    final exerciseCode = exercise['code']?.toString() ?? '';
     
-    final description = exercise['description'] as String?;
-    final videoUrl = exercise['video_url'] as String?;
-    final bool hasInfo = (description != null && description.isNotEmpty) || 
-                         (videoUrl != null && videoUrl.isNotEmpty);
+    // Check if exercise has code to show details
+    final bool hasCode = exerciseCode.isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
@@ -298,13 +299,13 @@ class PlanView extends ConsumerWidget {
           // Akcje (Info / Edit)
           Column(
             children: [
-              if (hasInfo)
+              if (hasCode)
                 IconButton(
                   icon: const Icon(Icons.info_outline, size: 20),
                   color: Colors.white38,
                   constraints: const BoxConstraints(),
                   padding: const EdgeInsets.all(8),
-                  onPressed: () => _showExerciseDetails(context, name, description, videoUrl),
+                  onPressed: () => _navigateToExerciseDetails(context, exerciseCode, name),
                 ),
               if (isEditable)
                 IconButton(
@@ -362,17 +363,23 @@ class PlanView extends ConsumerWidget {
   ) {
     final setsCtrl = TextEditingController(text: currentExercise['sets']?.toString() ?? '');
     final repsCtrl = TextEditingController(text: currentExercise['reps']?.toString() ?? '');
+    final lang = ref.read(languageProvider);
     
     // Zmienne stanu dialogu
     List<Map<String, dynamic>> alternatives = [];
     bool isLoadingAlts = true;
+    bool requestSent = false;
     Map<String, dynamic>? selectedAlternative; // Jeśli null, używamy currentExercise
 
-    // Pobierz alternatywy przy otwarciu
-    ref.read(exerciseServiceProvider).getAlternatives(currentExercise['code'] ?? '')
-      .then((alts) {
-        // Logika ładowania jest obsłużona wewnątrz StatefulBuilder poniżej.
-      });
+    // Helper to safely get equipment string
+    String _getEquipmentString(dynamic equipment) {
+      if (equipment == null) return '-';
+      if (equipment is String) return equipment;
+      if (equipment is List) {
+        return equipment.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).join(', ');
+      }
+      return '-';
+    }
 
     showDialog(
       context: context,
@@ -380,8 +387,9 @@ class PlanView extends ConsumerWidget {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             // Pierwsze uruchomienie wewnątrz dialogu - pobranie danych
-            if (isLoadingAlts) {
-              ref.read(exerciseServiceProvider).getAlternatives(currentExercise['code'] ?? '')
+            if (isLoadingAlts && !requestSent) {
+              requestSent = true;
+              ref.read(exerciseServiceProvider).getAlternatives(currentExercise['code']?.toString() ?? '')
                 .then((alts) {
                   if (context.mounted) {
                     setDialogState(() {
@@ -389,11 +397,14 @@ class PlanView extends ConsumerWidget {
                       isLoadingAlts = false;
                     });
                   }
+                }).catchError((e) {
+                  if (context.mounted) {
+                    setDialogState(() {
+                      alternatives = [];
+                      isLoadingAlts = false;
+                    });
+                  }
                 });
-              // Zabezpieczenie przed pętlą: isLoadingAlts = false ustawiamy w then
-              // Aby nie odpalać requestu co rebuild, można by użyć flagi 'requestSent', 
-              // ale tutaj upraszczamy zakładając szybki response.
-              // W idealnym świecie: use FutureBuilder.
             }
 
             final activeExercise = selectedAlternative ?? currentExercise;
@@ -401,7 +412,10 @@ class PlanView extends ConsumerWidget {
             return AlertDialog(
               backgroundColor: const Color(0xFF1E1E1E),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('Edytuj ćwiczenie', style: TextStyle(fontSize: 18)),
+              title: Text(
+                lang == 'pl' ? 'Edytuj ćwiczenie' : 'Edit exercise',
+                style: const TextStyle(fontSize: 18),
+              ),
               content: SizedBox(
                 width: double.maxFinite,
                 child: SingleChildScrollView(
@@ -410,7 +424,10 @@ class PlanView extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // --- ZMIANA PARAMETRÓW ---
-                      const Text('Parametry treningowe:', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text(
+                        lang == 'pl' ? 'Parametry treningowe:' : 'Training parameters:',
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
                       const SizedBox(height: 10),
                       Row(
                         children: [
@@ -419,7 +436,7 @@ class PlanView extends ConsumerWidget {
                               controller: setsCtrl,
                               style: const TextStyle(color: Colors.white),
                               decoration: InputDecoration(
-                                labelText: 'Serie',
+                                labelText: lang == 'pl' ? 'Serie' : 'Sets',
                                 filled: true,
                                 fillColor: Colors.black12,
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -434,7 +451,7 @@ class PlanView extends ConsumerWidget {
                               controller: repsCtrl,
                               style: const TextStyle(color: Colors.white),
                               decoration: InputDecoration(
-                                labelText: 'Powtórzenia',
+                                labelText: lang == 'pl' ? 'Powtórzenia' : 'Reps',
                                 filled: true,
                                 fillColor: Colors.black12,
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -450,7 +467,10 @@ class PlanView extends ConsumerWidget {
                       const SizedBox(height: 12),
 
                       // --- WYBÓR ĆWICZENIA ---
-                      const Text('Wymień ćwiczenie na inne:', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text(
+                        lang == 'pl' ? 'Wymień ćwiczenie na inne:' : 'Swap exercise for another:',
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
                       const SizedBox(height: 10),
                       
                       // Obecnie wybrane
@@ -467,7 +487,7 @@ class PlanView extends ConsumerWidget {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                _getExerciseName(activeExercise),
+                                _getExerciseName(activeExercise, lang),
                                 style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                               ),
                             ),
@@ -484,35 +504,47 @@ class PlanView extends ConsumerWidget {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ))
                       else if (alternatives.isEmpty)
-                        const Text('Brak dostępnych alternatyw dla tego ćwiczenia.', 
-                          style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))
+                        Text(
+                          lang == 'pl' 
+                            ? 'Brak dostępnych alternatyw dla tego ćwiczenia.'
+                            : 'No alternatives available for this exercise.',
+                          style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+                        )
                       else
                         ...alternatives.map((alt) {
                           // Nie pokazujemy na liście tego, co jest aktualnie wybrane
-                          if (alt['code'] == activeExercise['code']) return const SizedBox.shrink();
+                          final altCode = alt['code']?.toString();
+                          final activeCode = activeExercise['code']?.toString();
+                          if (altCode != null && altCode == activeCode) return const SizedBox.shrink();
 
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.swap_horiz, color: Colors.grey),
-                            title: Text(_getExerciseName(alt), style: const TextStyle(color: Colors.white70)),
+                            title: Text(
+                              _getExerciseName(alt, lang),
+                              style: const TextStyle(color: Colors.white70),
+                            ),
                             subtitle: Text(
-                              'Sprzęt: ${(alt['equipment'] as List?)?.join(", ") ?? "-"}',
+                              '${lang == 'pl' ? 'Sprzęt' : 'Equipment'}: ${_getEquipmentString(alt['equipment'])}',
                               style: const TextStyle(fontSize: 12, color: Colors.grey),
                             ),
                             onTap: () {
                               setDialogState(() {
-                                selectedAlternative = alt;
+                                selectedAlternative = Map<String, dynamic>.from(alt);
                               });
                             },
                           );
                         }),
                         
                         // Opcja powrotu do oryginału
-                        if (selectedAlternative != null && selectedAlternative!['code'] != currentExercise['code'])
+                        if (selectedAlternative != null && selectedAlternative!['code']?.toString() != currentExercise['code']?.toString())
                            ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.undo, color: Colors.orangeAccent),
-                            title: Text('Przywróć: ${_getExerciseName(currentExercise)}', style: const TextStyle(color: Colors.orangeAccent)),
+                            title: Text(
+                              '${lang == 'pl' ? 'Przywróć' : 'Restore'}: ${_getExerciseName(currentExercise, lang)}',
+                              style: const TextStyle(color: Colors.orangeAccent),
+                            ),
                             onTap: () {
                               setDialogState(() {
                                 selectedAlternative = null; // Reset do oryginału
@@ -525,24 +557,28 @@ class PlanView extends ConsumerWidget {
               ),
               actions: [
                 TextButton(
-                  child: const Text('Anuluj', style: TextStyle(color: Colors.grey)),
+                  child: Text(
+                    lang == 'pl' ? 'Anuluj' : 'Cancel',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
                   onPressed: () => Navigator.of(ctx).pop(),
                 ),
                 FilledButton(
-                  child: const Text('Zapisz zmiany'),
+                  child: Text(lang == 'pl' ? 'Zapisz zmiany' : 'Save changes'),
                   onPressed: () {
                     final baseExercise = selectedAlternative ?? currentExercise;
                     
-                    final newExerciseData = {
-                      ...baseExercise, 
-                      'sets': setsCtrl.text,
-                      'reps': repsCtrl.text,
-                    };
+                    final newExerciseData = <String, dynamic>{};
+                    baseExercise.forEach((key, value) {
+                      newExerciseData[key.toString()] = value;
+                    });
+                    newExerciseData['sets'] = setsCtrl.text;
+                    newExerciseData['reps'] = repsCtrl.text;
 
                     onExerciseChanged?.call(
                       dayIndex,
                       exerciseIndex,
-                      Map<String, dynamic>.from(newExerciseData), // <-- POPRAWKA: Jawne rzutowanie
+                      newExerciseData,
                     );
                     Navigator.of(ctx).pop();
                   },
@@ -555,52 +591,15 @@ class PlanView extends ConsumerWidget {
     );
   }
 
-  void _showExerciseDetails(BuildContext context, String name, String? description, String? videoUrl) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(name),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                description ?? 'Brak szczegółowego opisu.',
-                style: const TextStyle(color: Colors.white70, height: 1.4),
-              ),
-            ],
-          ),
+  void _navigateToExerciseDetails(BuildContext context, String exerciseCode, String exerciseName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ExerciseDetailScreen(
+          exerciseCode: exerciseCode,
+          exerciseName: exerciseName,
         ),
-        actions: [
-          TextButton(
-            child: const Text('Zamknij', style: TextStyle(color: Colors.grey)),
-            onPressed: () => Navigator.of(ctx).pop(),
-          ),
-          if (videoUrl != null && videoUrl.isNotEmpty)
-            FilledButton.icon(
-              icon: const Icon(Icons.play_circle_fill),
-              label: const Text('Wideo'),
-              style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-              onPressed: () {
-                _launchURL(videoUrl);
-              },
-            ),
-        ],
       ),
     );
-  }
-
-  Future<void> _launchURL(String urlString) async {
-    try {
-      final uri = Uri.parse(urlString);
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        debugPrint('Could not launch $urlString');
-      }
-    } catch (e) {
-      debugPrint('Error launching URL: $e');
-    }
   }
 }

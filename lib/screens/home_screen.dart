@@ -19,6 +19,27 @@ import 'active_workout_screen.dart';
 import 'workout_details_screen.dart'; 
 import 'exercise_library_screen.dart'; 
 
+// --- HELPERS ---
+
+/// Helper to extract exercise name from different formats
+String _getExerciseName(dynamic exercise, [String lang = 'pl']) {
+  if (exercise == null) return lang == 'pl' ? 'Nieznane' : 'Unknown';
+  if (exercise is String) return exercise;
+  if (exercise is Map) {
+    final name = exercise['name'];
+    if (name is String) return name;
+    if (name is Map) {
+      return name[lang]?.toString() ?? name['en']?.toString() ?? name['pl']?.toString() ?? (lang == 'pl' ? 'Nieznane' : 'Unknown');
+    }
+    return exercise['name_$lang']?.toString() ?? 
+           exercise['name_en']?.toString() ?? 
+           exercise['name_pl']?.toString() ?? 
+           exercise['code']?.toString() ?? 
+           (lang == 'pl' ? 'Nieznane' : 'Unknown');
+  }
+  return exercise.toString();
+}
+
 // --- PROVIDERS ---
 
 final planProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
@@ -291,22 +312,42 @@ class _HomeTab extends ConsumerWidget {
         final week = (plan['week'] as List?) ?? [];
         Map? todaysWorkout;
         if (week.isNotEmpty) {
-          final dayMap = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' };
-          final todayKey = dayMap[today];
+          // Day names in both Polish and English for matching
+          final dayMapPl = { 
+            1: 'Poniedziałek', 2: 'Wtorek', 3: 'Środa', 4: 'Czwartek', 
+            5: 'Piątek', 6: 'Sobota', 7: 'Niedziela' 
+          };
+          final dayMapEn = { 
+            1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 
+            5: 'Friday', 6: 'Saturday', 7: 'Sunday' 
+          };
+          final dayMapShort = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' };
+          
+          final todayPl = dayMapPl[today];
+          final todayEn = dayMapEn[today];
+          final todayShort = dayMapShort[today];
+          
           todaysWorkout = week.firstWhere(
-            (d) => (d['day'] as String?)?.startsWith(todayKey ?? '') ?? false,
+            (d) {
+              final dayName = (d['day']?.toString() ?? '').toLowerCase();
+              return dayName.startsWith(todayPl?.toLowerCase() ?? '') ||
+                     dayName.startsWith(todayEn?.toLowerCase() ?? '') ||
+                     dayName.startsWith(todayShort?.toLowerCase() ?? '');
+            },
             orElse: () => null,
           );
         }
 
+        final lang = ref.watch(languageProvider);
+        
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text('Witaj z powrotem!', style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
-            Text('Gotowy na trening?', style: textTheme.bodyLarge?.copyWith(color: Colors.grey)),
+            Text(lang == 'pl' ? 'Witaj z powrotem!' : 'Welcome back!', style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+            Text(lang == 'pl' ? 'Gotowy na trening?' : 'Ready to workout?', style: textTheme.bodyLarge?.copyWith(color: Colors.grey)),
             
             const SizedBox(height: 24),
-            Text('TWOJA AKTYWNOŚĆ', style: textTheme.labelLarge?.copyWith(letterSpacing: 1.0)),
+            Text(lang == 'pl' ? 'TWOJA AKTYWNOŚĆ' : 'YOUR ACTIVITY', style: textTheme.labelLarge?.copyWith(letterSpacing: 1.0)),
             const SizedBox(height: 12),
 
             Row(
@@ -322,18 +363,18 @@ class _HomeTab extends ConsumerWidget {
             ),
 
             const SizedBox(height: 24),
-            Text('DZISIEJSZY TRENING', style: textTheme.labelLarge?.copyWith(letterSpacing: 1.0)),
+            Text(lang == 'pl' ? 'DZISIEJSZY TRENING' : 'TODAY\'S WORKOUT', style: textTheme.labelLarge?.copyWith(letterSpacing: 1.0)),
             const SizedBox(height: 12),
             if (todaysWorkout != null)
-              _buildTodayWorkoutCard(context, todaysWorkout, unitSystem)
+              _buildTodayWorkoutCard(context, todaysWorkout, unitSystem, ref)
             else
               Card(
                 elevation: 0,
                 color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                child: const ListTile(
-                  leading: Icon(Icons.coffee_outlined),
-                  title: Text('Dzień wolny'),
-                  subtitle: Text('Odpocznij i zregeneruj siły!'),
+                child: ListTile(
+                  leading: const Icon(Icons.coffee_outlined),
+                  title: Text(lang == 'pl' ? 'Dzień wolny' : 'Rest day'),
+                  subtitle: Text(lang == 'pl' ? 'Odpocznij i zregeneruj siły!' : 'Take a break and recover!'),
                 ),
               ),
           ],
@@ -447,9 +488,14 @@ class _HomeTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildTodayWorkoutCard(BuildContext context, Map workout, String unitSystem) {
-    final title = (workout['day'] ?? workout['block'] ?? 'Trening').toString();
+  Widget _buildTodayWorkoutCard(BuildContext context, Map workout, String unitSystem, WidgetRef ref) {
+    final lang = ref.watch(languageProvider);
+    final title = (workout['day'] ?? workout['block'] ?? (lang == 'pl' ? 'Trening' : 'Workout')).toString();
     final exercises = (workout['exercises'] as List?) ?? [];
+    
+    // Build exercise names with proper language
+    final exerciseNames = exercises.take(3).map((e) => _getExerciseName(e, lang)).join(', ') +
+        (exercises.length > 3 ? '...' : '');
     
     return Container(
       width: double.infinity,
@@ -485,7 +531,7 @@ class _HomeTab extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${exercises.length} Ćwiczeń',
+                  '${exercises.length} ${lang == 'pl' ? 'Ćwiczeń' : 'Exercises'}',
                   style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -503,8 +549,7 @@ class _HomeTab extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            exercises.take(3).map((e) => (e as Map)['name']).join(', ') + 
-            (exercises.length > 3 ? '...' : ''),
+            exerciseNames,
             style: const TextStyle(color: Colors.white70, fontSize: 14),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -534,7 +579,7 @@ class _HomeTab extends ConsumerWidget {
                   ),
                 );
               },
-              child: const Text('Rozpocznij', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(lang == 'pl' ? 'Rozpocznij' : 'Start', style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
         ],

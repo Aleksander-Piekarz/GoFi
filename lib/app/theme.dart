@@ -87,7 +87,7 @@ final darkTheme = ThemeData(
       backgroundColor: AppColors.accent,
       foregroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      minimumSize: const Size.fromHeight(52),
+      minimumSize: const Size(double.minPositive, 52),
     ),
   ),
   filledButtonTheme: FilledButtonThemeData(
@@ -95,7 +95,7 @@ final darkTheme = ThemeData(
       backgroundColor: AppColors.accent,
       foregroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      minimumSize: const Size.fromHeight(52),
+      minimumSize: const Size(double.minPositive, 52),
     ),
   ),
   outlinedButtonTheme: OutlinedButtonThemeData(
@@ -104,7 +104,7 @@ final darkTheme = ThemeData(
       foregroundColor: Colors.white,
       side: const BorderSide(color: Colors.white24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      minimumSize: const Size.fromHeight(52),
+      minimumSize: const Size(double.minPositive, 52),
     ),
   ),
   dividerTheme: const DividerThemeData(
@@ -142,7 +142,7 @@ final lightTheme = ThemeData(
       backgroundColor: AppColors.accent,
       foregroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      minimumSize: const Size.fromHeight(52),
+      minimumSize: const Size(double.minPositive, 52),
     ),
   ),
   filledButtonTheme: FilledButtonThemeData(
@@ -150,7 +150,7 @@ final lightTheme = ThemeData(
       backgroundColor: AppColors.accent,
       foregroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      minimumSize: const Size.fromHeight(52),
+      minimumSize: const Size(double.minPositive, 52),
     ),
   ),
   outlinedButtonTheme: OutlinedButtonThemeData(
@@ -159,7 +159,7 @@ final lightTheme = ThemeData(
       foregroundColor: AppColors.lightText,
       side: const BorderSide(color: Colors.black26),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      minimumSize: const Size.fromHeight(52),
+      minimumSize: const Size(double.minPositive, 52),
     ),
   ),
   dividerTheme: const DividerThemeData(

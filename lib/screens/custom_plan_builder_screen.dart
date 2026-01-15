@@ -402,13 +402,18 @@ class _CustomPlanBuilderScreenState extends ConsumerState<CustomPlanBuilderScree
       return const Center(child: Text('Brak dni treningowych', style: TextStyle(color: Colors.white54)));
     }
     
+    // ZABEZPIECZENIE: Jeśli zmienisz liczbę dni na mniejszą, indeks może wyjść poza zakres
+    if (_selectedDayIndex >= _workoutDays.length) {
+      _selectedDayIndex = 0; // Resetuj indeks, jeśli jest błędny
+    }
+    
     final currentDay = _workoutDays[_selectedDayIndex];
     
     return Column(
       children: [
         // Selector dni
         SizedBox(
-          height: 50,
+          height: 60, // Zwiększono lekko wysokość dla bezpieczeństwa
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -416,17 +421,21 @@ class _CustomPlanBuilderScreenState extends ConsumerState<CustomPlanBuilderScree
             itemBuilder: (ctx, i) {
               final day = _workoutDays[i];
               final isSelected = i == _selectedDayIndex;
+              // POPRAWKA: Wrap w UnconstrainedBox lub Align zapobiega błędom "Infinite width" w Chipsach
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Text('${day.name.substring(0, 3)} (${day.exercises.length})'),
-                  selected: isSelected,
-                  onSelected: (_) => setState(() => _selectedDayIndex = i),
-                  selectedColor: AppColors.accent,
-                  backgroundColor: AppColors.bgAlt,
-                  labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : Colors.white70,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                child: Align(
+                  alignment: Alignment.center,
+                  child: ChoiceChip(
+                    label: Text('${day.name.substring(0, 3)} (${day.exercises.length})'),
+                    selected: isSelected,
+                    onSelected: (_) => setState(() => _selectedDayIndex = i),
+                    selectedColor: AppColors.accent,
+                    backgroundColor: AppColors.bgAlt,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : Colors.white70,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
                   ),
                 ),
               );
@@ -436,12 +445,13 @@ class _CustomPlanBuilderScreenState extends ConsumerState<CustomPlanBuilderScree
         
         const SizedBox(height: 16),
         
-        // Tytuł dnia
+        // Tytuł dnia i przycisk Dodaj
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Flexible zapobiega overflow tekstu
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,7 +490,7 @@ class _CustomPlanBuilderScreenState extends ConsumerState<CustomPlanBuilderScree
                   ),
                 )
               : ReorderableListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: currentDay.exercises.length,
                   onReorder: (oldIndex, newIndex) {
                     setState(() {
@@ -490,7 +500,9 @@ class _CustomPlanBuilderScreenState extends ConsumerState<CustomPlanBuilderScree
                     });
                   },
                   itemBuilder: (ctx, i) => _buildExerciseCard(
-                    key: ValueKey('${currentDay.name}_$i'),
+                    // KLUCZOWA POPRAWKA: Używaj ObjectKey dla mapy ćwiczenia, a nie ValueKey z indeksem!
+                    // ValueKey z indeksem powoduje błędy przy sortowaniu/usuwaniu.
+                    key: ObjectKey(currentDay.exercises[i]), 
                     exercise: currentDay.exercises[i],
                     index: i,
                     onDelete: () => setState(() => currentDay.exercises.removeAt(i)),
