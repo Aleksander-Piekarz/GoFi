@@ -102,6 +102,7 @@ class AppTranslations {
 
     // Biblioteka
     'exercise_library': {'pl': 'Biblioteka ćwiczeń', 'en': 'Exercise Library'},
+    'browse_exercises': {'pl': 'Przeglądaj i znajdź ćwiczenia', 'en': 'Browse and find exercises'},
     'all_muscles': {'pl': 'Wszystkie partie', 'en': 'All Muscles'},
     'all_equipment': {'pl': 'Cały sprzęt', 'en': 'All Equipment'},
     'all_levels': {'pl': 'Wszystkie poziomy', 'en': 'All Levels'},

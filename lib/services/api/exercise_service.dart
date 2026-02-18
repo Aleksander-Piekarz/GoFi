@@ -101,4 +101,73 @@ class ExerciseService {
   Future<List<Exercise>> searchExercises(String query) async {
     return getAllExercises(search: query, limit: 50);
   }
+
+  // =====================================================
+  // Custom Exercises - własne ćwiczenia użytkownika
+  // =====================================================
+
+  /// Pobiera listę własnych ćwiczeń użytkownika
+  Future<List<Map<String, dynamic>>> getCustomExercises() async {
+    try {
+      final res = await _api.get('/exercises/custom/list');
+      final List data = (res is Map && res.containsKey('data')) ? res['data'] : res;
+      return data.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+    } catch (e) {
+      print('Błąd pobierania własnych ćwiczeń: $e');
+      return [];
+    }
+  }
+
+  /// Tworzy nowe własne ćwiczenie
+  Future<Map<String, dynamic>> createCustomExercise({
+    required String nameEn,
+    String? namePl,
+    String? primaryMuscle,
+    List<String>? secondaryMuscles,
+    String? equipment,
+    String? pattern,
+    int? setsDefault,
+    int? repsDefault,
+    String? notes,
+  }) async {
+    try {
+      final body = {
+        'name_en': nameEn,
+        'name_pl': namePl ?? nameEn,
+        'primary_muscle': primaryMuscle ?? 'other',
+        'secondary_muscles': secondaryMuscles,
+        'equipment': equipment ?? 'body weight',
+        'pattern': pattern ?? 'accessory',
+        'sets_default': setsDefault ?? 3,
+        'reps_default': repsDefault ?? 10,
+        'notes': notes,
+      };
+      
+      final res = await _api.post('/exercises/custom', body: body);
+      return res as Map<String, dynamic>;
+    } catch (e) {
+      print('Błąd tworzenia własnego ćwiczenia: $e');
+      rethrow;
+    }
+  }
+
+  /// Aktualizuje własne ćwiczenie
+  Future<void> updateCustomExercise(int id, Map<String, dynamic> data) async {
+    try {
+      await _api.put('/exercises/custom/$id', body: data);
+    } catch (e) {
+      print('Błąd aktualizacji własnego ćwiczenia: $e');
+      rethrow;
+    }
+  }
+
+  /// Usuwa własne ćwiczenie
+  Future<void> deleteCustomExercise(int id) async {
+    try {
+      await _api.delete('/exercises/custom/$id');
+    } catch (e) {
+      print('Błąd usuwania własnego ćwiczenia: $e');
+      rethrow;
+    }
+  }
 }

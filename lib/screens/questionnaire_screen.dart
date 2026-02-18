@@ -17,6 +17,7 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
   final Map<String, dynamic> _answers = {};
   bool _loading = true;
   bool _saving = false;
+  bool _generating = false;
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -416,8 +417,56 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
     );
   }
 
-  Future<void> _submitAndNavigate() async {
+  Future<void> _saveAnswersOnly() async {
     setState(() => _saving = true);
+    try {
+      // Walidacja
+      for (final raw in _questions) {
+        final q = raw as Map;
+        final type = q['type'] as String?;
+        if (type == 'header') continue;
+        if (!_shouldShow(q)) continue;
+        final id = q['id'];
+        final optional = (q['optional'] ?? false) as bool;
+        final v = _answers[id];
+        if (!optional && (v == null || (v is List && v.isEmpty))) {
+          throw 'Uzupełnij pole: ${q['label'] ?? id}';
+        }
+      }
+
+      final svc = ref.read(questionnaireServiceProvider);
+      await svc.saveAnswers(_answers);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 10),
+              Text('Odpowiedzi zapisane!'),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _submitAndNavigate() async {
+    setState(() => _generating = true);
     try {
       for (final raw in _questions) {
         final q = raw as Map;
@@ -456,7 +505,7 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
         )
       );
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() => _generating = false);
     }
   }
 
@@ -555,7 +604,7 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Przycisk generowania planu
+            // Przycisk generowania planu (PŁATNY)
             SizedBox(
               width: double.infinity,
               height: 54,
@@ -569,8 +618,8 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                onPressed: _saving ? null : _submitAndNavigate,
-                child: _saving
+                onPressed: (_saving || _generating) ? null : _submitAndNavigate,
+                child: _generating
                     ? const SizedBox(
                         width: 24,
                         height: 24,
@@ -594,38 +643,80 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
                       ),
               ),
             ),
-            const SizedBox(height: 12),
-            // Przycisk własnego planu
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white38),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+            const SizedBox(height: 10),
+            // Rząd z dwoma przyciskami: Zapisz i Własny plan
+            Row(
+              children: [
+                // Przycisk zapisywania kwestionariusza (BEZPŁATNY)
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.green, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: (_saving || _generating) ? null : _saveAnswersOnly,
+                      child: _saving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  color: Colors.green, strokeWidth: 2),
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.save_outlined, size: 18, color: Colors.green),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Zapisz',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.green),
+                                ),
+                              ],
+                            ),
+                    ),
                   ),
                 ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CustomPlanBuilderScreen()),
-                  );
-                },
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.build_outlined, size: 20),
-                    SizedBox(width: 10),
-                    Text(
-                      'Stwórz własny plan',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                const SizedBox(width: 10),
+                // Przycisk własnego planu
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white38),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: (_saving || _generating) ? null : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CustomPlanBuilderScreen()),
+                        );
+                      },
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.build_outlined, size: 18),
+                          SizedBox(width: 6),
+                          Text(
+                            'Własny plan',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),

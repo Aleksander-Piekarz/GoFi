@@ -11,8 +11,6 @@ class ApiException implements Exception {
 }
 
 typedef TokenProvider = Future<String?> Function();
-
-// Definiujemy typ funkcji asynchronicznej dla callbacka
 typedef UnauthorizedCallback = Future<void> Function();
 
 class ApiClient {
@@ -21,13 +19,12 @@ class ApiClient {
     required this.getAuthToken,
     this.onUnauthorized,
     this.defaultHeaders = const {},
-    this.timeout = const Duration(seconds: 20),
+    this.timeout = const Duration(seconds: 60),
   });
 
   final String baseUrl;
   final TokenProvider getAuthToken;
-  // ZMIANA: Typ funkcji to teraz Future<void> Function()?, a nie VoidCallback
-  final UnauthorizedCallback? onUnauthorized; 
+  final UnauthorizedCallback? onUnauthorized;
   final Map<String, String> defaultHeaders;
   final Duration timeout;
 
@@ -47,11 +44,9 @@ class ApiClient {
 
   Future<Map<String, dynamic>> _handle(http.Response res) async {
     if (res.statusCode == 401) {
-      // ZMIANA: Czekamy (await), aż wylogowanie się zakończy
       if (onUnauthorized != null) {
         await onUnauthorized!();
       }
-      // Dopiero po wyczyszczeniu tokenu rzucamy błąd
       throw const ApiException('Sesja wygasła. Zaloguj się ponownie.', statusCode: 401);
     }
 

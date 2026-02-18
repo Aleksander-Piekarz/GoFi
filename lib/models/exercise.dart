@@ -39,13 +39,37 @@ class Exercise {
       difficulty: json['difficulty'] ?? 'beginner',
       equipment: json['equipment'] ?? 'body weight',
       primaryMuscle: json['primary_muscle'] ?? '',
-      secondaryMuscles: List<String>.from(json['secondary_muscles'] ?? []),
+      secondaryMuscles: _parseSecondaryMuscles(json['secondary_muscles']),
       description: json['description'] ?? '',
       instructions: _parseLocalizedStringList(json['instructions']),
       images: List<String>.from(json['images'] ?? []),
       commonMistakes: _parseLocalizedStringList(json['common_mistakes']),
       safety: ExerciseSafety.fromJson(json['safety'] ?? {}),
     );
+  }
+
+  /// Parsuje secondary_muscles - może być tablicą, stringiem lub obiektem {en: [], pl: []}
+  static List<String> _parseSecondaryMuscles(dynamic value) {
+    if (value == null) return [];
+    
+    // Obiekt z en/pl (nowy format)
+    if (value is Map) {
+      final enList = value['en'];
+      if (enList is List) return List<String>.from(enList);
+      final plList = value['pl'];
+      if (plList is List) return List<String>.from(plList);
+      return [];
+    }
+    
+    // Tablica
+    if (value is List) return List<String>.from(value);
+    
+    // String (np. "biceps,forearms")
+    if (value is String) {
+      return value.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+    }
+    
+    return [];
   }
 
   static Map<String, String> _parseLocalizedString(dynamic value) {

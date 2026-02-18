@@ -8,8 +8,8 @@ const { pool } = require("../lib/db"); // ⭐️ Używa globalnej puli
 // ---
 router.post("/workout", auth(true), async (req, res) => {
   const userId = req.user?.id;
-  // --- ZMIANA: Pobieramy też date_completed oraz name (dla kompatybilności) ---
-  const { planName, name, exercises, date_completed } = req.body; 
+  // --- ZMIANA: Pobieramy też date_completed, duration oraz name (dla kompatybilności) ---
+  const { planName, name, exercises, date_completed, duration_seconds, rest_time_seconds } = req.body; 
 
   if (!exercises || !Array.isArray(exercises) || exercises.length === 0) {
     return res.status(400).json({ error: "Brak ćwiczeń do zapisania." });
@@ -28,9 +28,10 @@ router.post("/workout", auth(true), async (req, res) => {
     // Jeśli planName jest puste, spróbuj użyć 'name', a ostatecznie "Trening"
     const nameToSave = planName || name || "Trening";
 
+    // Zapisz trening z czasem trwania
     const [logResult] = await connection.query(
-      "INSERT INTO workout_logs (user_id, plan_name, date_completed) VALUES (?, ?, ?)",
-      [userId, nameToSave, dateToSave]
+      "INSERT INTO workout_logs (user_id, plan_name, date_completed, duration_seconds, rest_time_seconds) VALUES (?, ?, ?, ?, ?)",
+      [userId, nameToSave, dateToSave, duration_seconds || null, rest_time_seconds || null]
     );
     const newLogId = logResult.insertId;
 
@@ -46,6 +47,7 @@ router.post("/workout", auth(true), async (req, res) => {
           index + 1, 
           parseInt(set.reps) || 0,
           parseFloat(set.weight) || 0,
+          parseInt(set.duration_seconds) || null,
         ]);
       });
     }
@@ -55,7 +57,7 @@ router.post("/workout", auth(true), async (req, res) => {
       return res.status(400).json({ error: "Brak serii do zapisania." });
     }
 
-    const sql = "INSERT INTO workout_log_sets (workout_log_id, user_id, exercise_code, set_number, reps, weight) VALUES ?";
+    const sql = "INSERT INTO workout_log_sets (workout_log_id, user_id, exercise_code, set_number, reps, weight, duration_seconds) VALUES ?";
     await connection.query(sql, [setsToInsert]);
 
     await connection.commit();
@@ -79,7 +81,7 @@ router.get("/logged-exercises", auth(true), async (req, res) => {
     const sql = `
       SELECT 
         T1.exercise_code AS code,
-        MAX(E.name) AS name, 
+        MAX(COALESCE(E.name_pl, E.name_en, T1.exercise_code)) AS name, 
         MAX(T2.date_completed) AS last_logged
       FROM workout_log_sets AS T1
       JOIN workout_logs AS T2 ON T1.workout_log_id = T2.id
@@ -139,7 +141,7 @@ router.get("/workouts", auth(true), async (req, res) => {
   const userId = req.user.id;
   try {
     const sql = `
-      SELECT id, plan_name, date_completed
+      SELECT id, plan_name, date_completed, duration_seconds, rest_time_seconds
       FROM workout_logs
       WHERE user_id = ?
       ORDER BY date_completed DESC
@@ -161,13 +163,22 @@ router.get("/workout/:logId", auth(true), async (req, res) => {
   const userId = req.user.id;
   const logId = req.params.logId;
   try {
+    // Pobierz podstawowe info o treningu
+    const [logInfo] = await pool.promise().query(
+      `SELECT plan_name, date_completed, duration_seconds, rest_time_seconds 
+       FROM workout_logs WHERE id = ? AND user_id = ?`,
+      [logId, userId]
+    );
+
+    // Pobierz serie
     const sql = `
       SELECT 
         S.exercise_code,
-        E.name AS exercise_name,
+        COALESCE(E.name_pl, E.name_en, S.exercise_code) AS exercise_name,
         S.set_number,
         S.reps,
-        S.weight
+        S.weight,
+        S.duration_seconds
       FROM workout_log_sets AS S
       LEFT JOIN exercises AS E ON S.exercise_code = E.code
       WHERE S.workout_log_id = ? AND S.user_id = ?
@@ -183,16 +194,23 @@ router.get("/workout/:logId", auth(true), async (req, res) => {
           code: row.exercise_code,
           name: row.exercise_name || row.exercise_code,
           sets: [],
+          totalDuration: 0,
         });
       }
+      const duration = row.duration_seconds || 0;
       exercisesMap.get(row.exercise_code).sets.push({
         set: row.set_number,
         reps: row.reps,
         weight: row.weight,
+        duration_seconds: duration,
       });
+      exercisesMap.get(row.exercise_code).totalDuration += duration;
     }
     
-    res.json(Array.from(exercisesMap.values()));
+    res.json({
+      workout: logInfo[0] || {},
+      exercises: Array.from(exercisesMap.values())
+    });
   } catch (error) {
     console.error("Błąd pobierania szczegółów logu treningu:", error);
     res.status(500).json({ error: "Błąd serwera" });

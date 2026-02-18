@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/theme.dart';
 import '../services/api/providers.dart';
 import '../services/api/user_service.dart';
+import '../services/api/app_version_service.dart';
 import '../utils/language_settings.dart';
+import '../widgets/update_dialog.dart';
 import 'questionnaire_screen.dart';
 import 'starting_screen.dart';
 
@@ -371,6 +373,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       onChanged: (v) => _toggleNotifications(v),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // --- APLIKACJA ---
+              Text('Aplikacja', style: textTheme.titleSmall),
+              const SizedBox(height: 8),
+              Card(
+                child: CheckUpdateButton(
+                  onCheckUpdate: () => ref.read(appVersionServiceProvider).checkForUpdate(),
                 ),
               ),
               const SizedBox(height: 16),

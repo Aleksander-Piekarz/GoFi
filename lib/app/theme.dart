@@ -111,6 +111,35 @@ final darkTheme = ThemeData(
     color: AppColors.accentSecondary,
     thickness: 1,
   ),
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: AppColors.bgAlt,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide.none,
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: AppColors.stroke, width: 1),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: AppColors.accent, width: 2),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+    ),
+    labelStyle: const TextStyle(color: AppColors.textDim),
+    hintStyle: const TextStyle(color: AppColors.textDim),
+    prefixIconColor: AppColors.textDim,
+    suffixIconColor: AppColors.textDim,
+  ),
 );
 
 // === LIGHT THEME ===
@@ -165,6 +194,35 @@ final lightTheme = ThemeData(
   dividerTheme: const DividerThemeData(
     color: Colors.black12,
     thickness: 1,
+  ),
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: Colors.grey.shade100,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide.none,
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: AppColors.accent, width: 2),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+    ),
+    labelStyle: const TextStyle(color: AppColors.lightTextDim),
+    hintStyle: const TextStyle(color: AppColors.lightTextDim),
+    prefixIconColor: AppColors.lightTextDim,
+    suffixIconColor: AppColors.lightTextDim,
   ),
 );
 

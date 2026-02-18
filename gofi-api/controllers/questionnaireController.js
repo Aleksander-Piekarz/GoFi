@@ -1,5 +1,6 @@
 const { pool } = require("../lib/db");
 const algorithm = require("../lib/algorithm"); // Importujemy nasz nowy moduł
+const { generatePlan } = require("../lib/aiPlanner"); // AI Planner z fallback
 const fs = require('fs');
 const path = require('path');
 
@@ -18,7 +19,8 @@ async function getAllExercises(poolPromise) {
             code, name_en, name_pl, primary_muscle, secondary_muscles, pattern, 
             equipment, location, difficulty, unilateral, is_machine, 
             minutes_est, instructions_en, instructions_pl, video_url,
-            mechanics, safety_data
+            mechanics, safety_data, body_part, detailed_muscle, tier,
+            fatigue_score, rep_range_type, avg_time_per_set
           FROM exercises
         `;
         const [rows] = await poolPromise.query(sql);
@@ -42,7 +44,11 @@ async function getAllExercises(poolPromise) {
                     equipment: ex.equipment ? ex.equipment.split(',') : [],
                     location: ex.location ? ex.location.split(',') : [],
                     excluded_injuries: excludedInjuries,
-                    difficulty: parseInt(ex.difficulty) || 2
+                    difficulty: parseInt(ex.difficulty) || 2,
+                    body_part: ex.body_part || 'LEGS', // Fallback dla starych rekordów
+                    tier: ex.tier || 'standard',
+                    fatigue_score: ex.fatigue_score || 3,
+                    avg_time_per_set: ex.avg_time_per_set || 40
                 };
             });
         }
@@ -64,20 +70,70 @@ function loadExercisesFromJson() {
                 console.log(`Załadowano ${exercises.length} ćwiczeń z JSON: ${path.basename(jsonPath)}`);
                 
                 // Normalizuj dane z JSON do formatu oczekiwanego przez algorytm
-                return exercises.map(ex => ({
-                    ...ex,
-                    name: ex.name || ex.name_en || ex.name_pl,
-                    name_en: ex.name_en || ex.name,
-                    name_pl: ex.name_pl || ex.name,
-                    description: ex.description || ex.instructions_en || ex.instructions_pl,
-                    // Normalizacja equipment - może być string lub tablica
-                    equipment: normalizeToArray(ex.equipment),
-                    // Normalizacja location - może być string, tablica lub undefined
-                    location: normalizeToArray(ex.location, ['gym', 'home']), // domyślnie wszędzie
-                    excluded_injuries: ex.excluded_injuries || ex.safety?.excluded_injuries || [],
-                    difficulty: parseInt(ex.difficulty) || 2,
-                    pattern: ex.pattern || 'accessory'
-                }));
+                return exercises.map(ex => {
+                    // Obsługa wielojęzycznych nazw
+                    const nameEn = typeof ex.name === 'object' ? ex.name.en : (ex.name_en || ex.name);
+                    const namePl = typeof ex.name === 'object' ? ex.name.pl : (ex.name_pl || ex.name);
+                    
+                    // Obsługa wielojęzycznych instrukcji
+                    const instructionsEn = typeof ex.instructions === 'object' ? ex.instructions.en : ex.instructions_en;
+                    const instructionsPl = typeof ex.instructions === 'object' ? ex.instructions.pl : ex.instructions_pl;
+                    
+                    // Mapowanie pattern z nowego formatu
+                    const patternMapping = {
+                        'pull_vertical': 'pull_v',
+                        'pull_horizontal': 'pull_h',
+                        'push_vertical': 'push_v',
+                        'push_horizontal': 'push_h',
+                        'knee_dominant': 'squat',
+                        'hip_dominant': 'hinge'
+                    };
+                    const normalizedPattern = patternMapping[ex.pattern] || ex.pattern || 'accessory';
+                    
+                    // Mapowanie difficulty na wartości liczbowe
+                    const difficultyMapping = {
+                        'beginner': 1,
+                        'intermediate': 2,
+                        'advanced': 3
+                    };
+                    const difficultyValue = typeof ex.difficulty === 'string' 
+                        ? difficultyMapping[ex.difficulty] || 2 
+                        : (parseInt(ex.difficulty) || 2);
+                    
+                    return {
+                        ...ex,
+                        code: ex.code,
+                        name: nameEn || namePl,
+                        name_en: nameEn,
+                        name_pl: namePl,
+                        body_part: ex.body_part,
+                        detailed_muscle: ex.detailed_muscle,
+                        primary_muscle: ex.primary_muscle,
+                        secondary_muscles: ex.secondary_muscles || [],
+                        tier: ex.tier || 'standard', // optimal, standard, warmup
+                        fatigue_score: ex.fatigue_score || 3,
+                        rep_range_type: ex.rep_range_type || 'hypertrophy', // strength, hypertrophy, endurance
+                        unilateral: ex.unilateral || false,
+                        avg_time_per_set: ex.avg_time_per_set || 30,
+                        mechanics: ex.mechanics || 'compound',
+                        pattern: normalizedPattern,
+                        original_pattern: ex.pattern, // zachowaj oryginalny pattern
+                        difficulty: difficultyValue,
+                        difficulty_label: ex.difficulty, // zachowaj etykietę
+                        description: Array.isArray(instructionsEn) ? instructionsEn.join(' ') : instructionsEn,
+                        instructions_en: instructionsEn,
+                        instructions_pl: instructionsPl,
+                        common_mistakes_en: typeof ex.common_mistakes === 'object' ? ex.common_mistakes.en : ex.common_mistakes_en,
+                        common_mistakes_pl: typeof ex.common_mistakes === 'object' ? ex.common_mistakes.pl : ex.common_mistakes_pl,
+                        // Normalizacja equipment - może być string lub tablica
+                        equipment: normalizeToArray(ex.equipment),
+                        // Lokalizacja na podstawie sprzętu
+                        location: determineLocationFromEquipment(ex.equipment),
+                        excluded_injuries: ex.excluded_injuries || ex.safety?.excluded_injuries || [],
+                        requires_spotter: ex.safety?.requires_spotter || false,
+                        images: ex.images || []
+                    };
+                });
             }
         } catch (err) {
             console.warn(`Nie udało się załadować ${jsonPath}:`, err.message);
@@ -85,6 +141,25 @@ function loadExercisesFromJson() {
     }
     console.error('Nie znaleziono żadnego pliku z ćwiczeniami!');
     return [];
+}
+
+// Określa lokalizację na podstawie wymaganego sprzętu
+function determineLocationFromEquipment(equipment) {
+    if (!equipment) return ['gym', 'home'];
+    const eq = typeof equipment === 'string' ? equipment.toLowerCase() : '';
+    const eqArray = Array.isArray(equipment) ? equipment.map(e => e.toLowerCase()) : [eq];
+    
+    // Sprzęt typowo domowy
+    const homeEquipment = ['body weight', 'bodyweight', 'none', 'band', 'bands', 'dumbbell', 'dumbbells', 'kettlebell'];
+    // Sprzęt typowo siłowniowy
+    const gymOnlyEquipment = ['cable', 'machine', 'smith machine', 'lat pulldown', 'leg press', 'hack squat'];
+    
+    const isHomeCompatible = eqArray.some(e => homeEquipment.includes(e));
+    const isGymOnly = eqArray.some(e => gymOnlyEquipment.includes(e));
+    
+    if (isGymOnly) return ['gym'];
+    if (isHomeCompatible) return ['gym', 'home', 'outdoor'];
+    return ['gym', 'home'];
 }
 
 // Normalizuje wartość do tablicy
@@ -142,28 +217,61 @@ exports.submitAnswers = async (req, res) => {
         const allExercises = await getAllExercises(poolPromise);
         const historyMap = await getUserMaxWeights(poolPromise, userId);
         
-        // Normalizacja sprzętu (dodajemy bodyweight/none zawsze)
+        // Normalizacja sprzętu (dodajemy bodyweight zawsze)
         let userEquipment = answers.equipment || [];
         if (!userEquipment.includes('bodyweight')) userEquipment.push('bodyweight');
-        if (!userEquipment.includes('none')) userEquipment.push('none');
+
+        // Przetworzenie kontuzji - usuń "none" jeśli jest z innymi wartościami
+        let injuries = answers.injuries || [];
+        if (injuries.includes('none') && injuries.length > 1) {
+            injuries = injuries.filter(i => i !== 'none');
+        }
+        if (injuries.includes('none')) {
+            injuries = [];
+        }
+
+        // Przetworzenie słabych punktów
+        let weakPoints = answers.weak_points || [];
+        if (weakPoints.includes('none')) {
+            weakPoints = [];
+        }
 
         const userProfile = {
             experience: answers.experience || 'beginner',
             daysPerWeek: parseInt(answers.days_per_week) || 3,
-            injuries: answers.injuries || [],
+            injuries: injuries,
             equipment: userEquipment,
             goal: answers.goal || 'recomposition',
             location: answers.location || 'gym',
-            preferredDays: answers.preferred_days || [], // Preferowane dni treningowe
-            sessionTime: parseInt(answers.session_time) || 60 // Czas sesji w minutach
+            preferredDays: answers.preferred_days || [],
+            sessionTime: parseInt(answers.session_time) || 60,
+            // Nowe pola z rozszerzonego kwestionariusza
+            focusBody: answers.focus_body || 'balanced',
+            weakPoints: weakPoints,
+            trainingStyle: answers.training_style || 'traditional',
+            cardioPreference: answers.cardio_preference || 'none',
+            preferUnilateral: answers.prefer_unilateral === 'yes',
+            fatigueTolerance: answers.fatigue_tolerance || 'medium',
+            includeWarmup: answers.include_warmup === 'yes',
+            ageRange: answers.age_range,
+            gender: answers.gender,
+            mobilityIssues: answers.mobility_issues || []
         };
 
-        // 3. Generowanie Planu (Logika CSCS)
-        const plan = algorithm.generateAdvancedPlan(userProfile, allExercises, historyMap);
+        // 3. Generowanie Planu (AI Planner z fallback na lokalny algorytm)
+        const aiResult = await generatePlan(userProfile, allExercises);
         
-        if (!plan) {
+        if (!aiResult || !aiResult.plan) {
             return res.status(500).json({ error: "Nie udało się wygenerować planu. Sprawdź kryteria." });
         }
+
+        // Przygotuj plan z informacją o fallback
+        const plan = {
+            ...aiResult.plan,
+            usedFallback: aiResult.usedFallback,
+            fallbackReason: aiResult.fallbackReason,
+            metadata: aiResult.metadata
+        };
 
         // 4. Zapis Planu
         const [pResult] = await poolPromise.query(
@@ -174,7 +282,9 @@ exports.submitAnswers = async (req, res) => {
         res.json({
             ok: true,
             planId: pResult.insertId,
-            plan: plan
+            plan: plan,
+            usedFallback: aiResult.usedFallback,
+            fallbackReason: aiResult.fallbackReason
         });
 
     } catch (error) {
@@ -198,16 +308,25 @@ exports.getLatestPlan = async (req, res) => {
     }
 };
 
+// Zapisz tylko odpowiedzi (bez generowania planu - bezpłatne)
 exports.saveAnswers = async (req, res) => {
-    // Prosty zapis bez generowania (np. draft)
     try {
         const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: "Unauthorized" });
+        
+        const answers = req.body || {};
+        
+        // Walidacja podstawowa
+        const errors = algorithm.validateAnswers(answers);
+        if (errors.length) return res.status(400).json({ error: "Validation failed", details: errors });
+        
         await pool.promise().query(
             "INSERT INTO questionnaires (user_id, answers_json, created_at) VALUES (?, ?, NOW())",
-            [userId, JSON.stringify(req.body)]
+            [userId, JSON.stringify(answers)]
         );
-        res.json({ ok: true });
+        res.json({ ok: true, message: "Odpowiedzi zapisane pomyślnie" });
     } catch (e) {
+        console.error("Błąd w saveAnswers:", e);
         res.status(500).json({ error: "Błąd zapisu" });
     }
 };
@@ -222,6 +341,49 @@ exports.getLatestAnswers = async (req, res) => {
         res.json(typeof rows[0].answers_json === 'string' ? JSON.parse(rows[0].answers_json) : rows[0].answers_json);
     } catch (e) {
         res.status(500).json({ error: "Błąd pobierania odpowiedzi" });
+    }
+};
+
+// --- AKTUALIZACJA AKTUALNEGO PLANU ---
+exports.updateLatestPlan = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: "Unauthorized" });
+        
+        const plan = req.body;
+        if (!plan || !plan.week || !Array.isArray(plan.week)) {
+            return res.status(400).json({ error: "Nieprawidłowy format planu" });
+        }
+
+        const poolPromise = pool.promise();
+        
+        // Znajdź ostatni plan użytkownika
+        const [rows] = await poolPromise.query(
+            "SELECT id FROM plans WHERE user_id=? ORDER BY id DESC LIMIT 1",
+            [userId]
+        );
+        
+        if (!rows.length) {
+            return res.status(404).json({ error: "Brak planu do aktualizacji" });
+        }
+        
+        const planId = rows[0].id;
+        
+        // Aktualizuj plan
+        await poolPromise.query(
+            "UPDATE plans SET plan_json = ? WHERE id = ?",
+            [JSON.stringify(plan), planId]
+        );
+
+        res.json({
+            ok: true,
+            planId: planId,
+            plan: plan
+        });
+
+    } catch (error) {
+        console.error("Błąd w updateLatestPlan:", error);
+        res.status(500).json({ error: "Błąd serwera." });
     }
 };
 

@@ -597,7 +597,7 @@ class _CustomPlanBuilderScreenState extends ConsumerState<CustomPlanBuilderScree
       return;
     }
     
-    final selected = await showModalBottomSheet<Exercise>(
+    final result = await showModalBottomSheet<dynamic>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.bg,
@@ -605,29 +605,47 @@ class _CustomPlanBuilderScreenState extends ConsumerState<CustomPlanBuilderScree
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
+        initialChildSize: 0.85,
         minChildSize: 0.5,
         maxChildSize: 0.95,
         expand: false,
         builder: (_, scrollController) => _ExercisePickerSheet(
           exercises: exercises,
           scrollController: scrollController,
+          multiSelect: true, // Włącz multi-select
         ),
       ),
     );
     
-    if (selected != null && mounted) {
+    if (result != null && mounted) {
       setState(() {
-        _workoutDays[dayIndex].exercises.add({
-          'code': selected.code,
-          'name': selected.getName('pl'),
-          'name_en': selected.getName('en'),
-          'name_pl': selected.getName('pl'),
-          'pattern': selected.pattern,
-          'primary_muscle': selected.primaryMuscle,
-          'sets': 3,
-          'reps': '8-12',
-        });
+        if (result is List<Exercise>) {
+          // Multi-select: dodaj wszystkie wybrane
+          for (final selected in result) {
+            _workoutDays[dayIndex].exercises.add({
+              'code': selected.code,
+              'name': selected.getName('pl'),
+              'name_en': selected.getName('en'),
+              'name_pl': selected.getName('pl'),
+              'pattern': selected.pattern,
+              'primary_muscle': selected.primaryMuscle,
+              'sets': 3,
+              'reps': '8-12',
+            });
+          }
+        } else if (result is Exercise) {
+          // Pojedynczy wybór
+          _workoutDays[dayIndex].exercises.add({
+            'code': result.code,
+            'name': result.getName('pl'),
+            'name_en': result.getName('en'),
+            'name_pl': result.getName('pl'),
+            'pattern': result.pattern,
+            'primary_muscle': result.primaryMuscle,
+            'sets': 3,
+            'reps': '8-12',
+          });
+        }
       });
     }
   }
@@ -798,8 +816,13 @@ class WorkoutDay {
 class _ExercisePickerSheet extends StatefulWidget {
   final List<Exercise> exercises;
   final ScrollController scrollController;
+  final bool multiSelect;
   
-  const _ExercisePickerSheet({required this.exercises, required this.scrollController});
+  const _ExercisePickerSheet({
+    required this.exercises, 
+    required this.scrollController,
+    this.multiSelect = false,
+  });
   
   @override
   State<_ExercisePickerSheet> createState() => _ExercisePickerSheetState();
@@ -807,15 +830,55 @@ class _ExercisePickerSheet extends StatefulWidget {
 
 class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
   String _search = '';
+  String? _selectedMuscle;
+  String? _selectedEquipment;
+  final Set<Exercise> _selectedExercises = {};
+  
+  static const _muscleGroups = [
+    {'value': 'chest', 'label': 'Klatka'},
+    {'value': 'back', 'label': 'Plecy'},
+    {'value': 'shoulders', 'label': 'Barki'},
+    {'value': 'biceps', 'label': 'Biceps'},
+    {'value': 'triceps', 'label': 'Triceps'},
+    {'value': 'quads', 'label': 'Nogi przód'},
+    {'value': 'hamstrings', 'label': 'Nogi tył'},
+    {'value': 'glutes', 'label': 'Pośladki'},
+    {'value': 'abs', 'label': 'Brzuch'},
+    {'value': 'calves', 'label': 'Łydki'},
+  ];
+  
+  static const _equipmentOptions = [
+    {'value': 'body weight', 'label': 'Ciało'},
+    {'value': 'barbell', 'label': 'Sztanga'},
+    {'value': 'dumbbell', 'label': 'Hantle'},
+    {'value': 'cable', 'label': 'Wyciąg'},
+    {'value': 'machine', 'label': 'Maszyna'},
+  ];
   
   @override
   Widget build(BuildContext context) {
     final filtered = widget.exercises.where((ex) {
-      if (_search.isEmpty) return true;
-      final name = ex.getName('pl').toLowerCase();
-      final code = ex.code.toLowerCase();
-      return name.contains(_search.toLowerCase()) || code.contains(_search.toLowerCase());
+      // Filtr tekstowy
+      if (_search.isNotEmpty) {
+        final name = ex.getName('pl').toLowerCase();
+        final code = ex.code.toLowerCase();
+        if (!name.contains(_search.toLowerCase()) && !code.contains(_search.toLowerCase())) {
+          return false;
+        }
+      }
+      // Filtr mięśnia
+      if (_selectedMuscle != null && ex.primaryMuscle.toLowerCase() != _selectedMuscle!.toLowerCase()) {
+        return false;
+      }
+      // Filtr sprzętu
+      if (_selectedEquipment != null && ex.equipment.toLowerCase() != _selectedEquipment!.toLowerCase()) {
+        return false;
+      }
+      return true;
     }).toList();
+    
+    // Sortuj po nazwie
+    filtered.sort((a, b) => a.getName('pl').compareTo(b.getName('pl')));
     
     return Column(
       children: [
@@ -826,8 +889,9 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
           decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
         ),
         
+        // Wyszukiwarka
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: TextField(
             decoration: InputDecoration(
               hintText: 'Szukaj ćwiczenia...',
@@ -835,30 +899,220 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
               filled: true,
               fillColor: AppColors.bgAlt,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0),
             ),
             onChanged: (v) => setState(() => _search = v),
           ),
         ),
         
+        // Filtry partii mięśniowych
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            children: [
+              _buildFilterChip(
+                label: 'Wszystkie',
+                isSelected: _selectedMuscle == null,
+                onTap: () => setState(() => _selectedMuscle = null),
+              ),
+              ..._muscleGroups.map((m) => _buildFilterChip(
+                label: m['label']!,
+                isSelected: _selectedMuscle == m['value'],
+                onTap: () => setState(() => _selectedMuscle = _selectedMuscle == m['value'] ? null : m['value']),
+              )),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 8),
+        
+        // Filtry sprzętu
+        SizedBox(
+          height: 36,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            children: [
+              ..._equipmentOptions.map((e) => Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: FilterChip(
+                  label: Text(e['label']!, style: const TextStyle(fontSize: 11)),
+                  selected: _selectedEquipment == e['value'],
+                  onSelected: (selected) => setState(() => _selectedEquipment = selected ? e['value'] : null),
+                  selectedColor: Colors.blue.withOpacity(0.3),
+                  backgroundColor: AppColors.bgAlt,
+                  labelStyle: TextStyle(
+                    color: _selectedEquipment == e['value'] ? Colors.blue : Colors.white70,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                ),
+              )),
+            ],
+          ),
+        ),
+        
+        // Licznik wyników
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${filtered.length} ćwiczeń',
+                style: TextStyle(color: Colors.grey[500], fontSize: 12),
+              ),
+              if (widget.multiSelect && _selectedExercises.isNotEmpty)
+                Text(
+                  'Wybrano: ${_selectedExercises.length}',
+                  style: const TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+            ],
+          ),
+        ),
+        
+        // Lista ćwiczeń
         Expanded(
           child: ListView.builder(
             controller: widget.scrollController,
             itemCount: filtered.length,
             itemBuilder: (ctx, i) {
               final ex = filtered[i];
-              return ListTile(
-                title: Text(ex.getName('pl'), style: const TextStyle(color: Colors.white)),
-                subtitle: Text(
-                  '${ex.primaryMuscle} • ${ex.pattern}',
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+              final isSelected = _selectedExercises.contains(ex);
+              
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.accent.withOpacity(0.15) : AppColors.bgAlt,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected ? AppColors.accent : Colors.transparent,
+                    width: 1.5,
+                  ),
                 ),
-                trailing: const Icon(Icons.add_circle_outline, color: AppColors.accent),
-                onTap: () => Navigator.pop(context, ex),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      color: Colors.black26,
+                      child: Image.asset(
+                        'assets/images/exercises/${ex.code}.gif',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.fitness_center, color: Colors.white38),
+                      ),
+                    ),
+                  ),
+                  title: Text(
+                    ex.getName('pl'),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  subtitle: Row(
+                    children: [
+                      _buildMiniTag(ex.getPrimaryMuscleLabel('pl'), AppColors.accent),
+                      const SizedBox(width: 6),
+                      _buildMiniTag(ex.getEquipmentLabel('pl'), Colors.blue),
+                    ],
+                  ),
+                  trailing: widget.multiSelect
+                      ? Checkbox(
+                          value: isSelected,
+                          onChanged: (_) => _toggleSelection(ex),
+                          activeColor: AppColors.accent,
+                        )
+                      : const Icon(Icons.add_circle_outline, color: AppColors.accent),
+                  onTap: () {
+                    if (widget.multiSelect) {
+                      _toggleSelection(ex);
+                    } else {
+                      Navigator.pop(context, ex);
+                    }
+                  },
+                ),
               );
             },
           ),
         ),
+        
+        // Przycisk potwierdzenia dla multi-select
+        if (widget.multiSelect)
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _selectedExercises.isEmpty 
+                      ? null 
+                      : () => Navigator.pop(context, _selectedExercises.toList()),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(
+                    'Dodaj ${_selectedExercises.length} ćwicze${_selectedExercises.length == 1 ? "nie" : "ń"}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+          ),
       ],
+    );
+  }
+  
+  void _toggleSelection(Exercise ex) {
+    setState(() {
+      if (_selectedExercises.contains(ex)) {
+        _selectedExercises.remove(ex);
+      } else {
+        _selectedExercises.add(ex);
+      }
+    });
+  }
+  
+  Widget _buildFilterChip({required String label, required bool isSelected, required VoidCallback onTap}) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.accent : AppColors.bgAlt,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.white70,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildMiniTag(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w500),
+      ),
     );
   }
 }

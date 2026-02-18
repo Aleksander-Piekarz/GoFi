@@ -80,10 +80,26 @@ exports.getAllExercises = async (req, res) => {
 
     // Filtrowanie
     if (muscle) {
-      exercises = exercises.filter(ex => 
-        ex.primary_muscle?.toLowerCase() === muscle.toLowerCase() ||
-        ex.secondary_muscles?.some(m => m.toLowerCase() === muscle.toLowerCase())
-      );
+      exercises = exercises.filter(ex => {
+        if (ex.primary_muscle?.toLowerCase() === muscle.toLowerCase()) return true;
+        // secondary_muscles może być: tablicą, stringiem, lub obiektem {en: [], pl: []}
+        const secondary = ex.secondary_muscles;
+        if (!secondary) return false;
+        
+        // Obiekt z en/pl (nowy format)
+        if (secondary.en && Array.isArray(secondary.en)) {
+          return secondary.en.some(m => m.toLowerCase() === muscle.toLowerCase());
+        }
+        // Tablica
+        if (Array.isArray(secondary)) {
+          return secondary.some(m => m.toLowerCase() === muscle.toLowerCase());
+        }
+        // String
+        if (typeof secondary === 'string') {
+          return secondary.toLowerCase().split(',').map(s => s.trim()).includes(muscle.toLowerCase());
+        }
+        return false;
+      });
     }
 
     if (equipment) {
@@ -219,6 +235,186 @@ exports.getAlternatives = async (req, res) => {
 
   } catch (error) {
     console.error("Błąd pobierania alternatyw:", error);
+    res.status(500).json({ error: "Błąd serwera" });
+  }
+};
+
+// =====================================================
+// Custom Exercises - CRUD dla ćwiczeń użytkownika
+// =====================================================
+
+/**
+ * Pobiera wszystkie własne ćwiczenia użytkownika
+ */
+exports.getUserCustomExercises = async (req, res) => {
+  const userId = req.user?.id;
+  
+  if (!userId) {
+    return res.status(401).json({ error: "Brak autoryzacji" });
+  }
+
+  try {
+    const poolPromise = pool.promise();
+    const [rows] = await poolPromise.query(
+      `SELECT id, name_en, name_pl, primary_muscle, secondary_muscles,
+              equipment, pattern, sets_default, reps_default, notes, created_at
+       FROM user_custom_exercises
+       WHERE user_id = ?
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    // Konwertuj secondary_muscles na tablicę
+    const exercises = rows.map(row => ({
+      ...row,
+      secondary_muscles: row.secondary_muscles ? row.secondary_muscles.split(',') : [],
+      is_custom: true
+    }));
+
+    res.json({ data: exercises });
+  } catch (error) {
+    console.error("Błąd pobierania własnych ćwiczeń:", error);
+    res.status(500).json({ error: "Błąd serwera" });
+  }
+};
+
+/**
+ * Tworzy nowe własne ćwiczenie
+ */
+exports.createCustomExercise = async (req, res) => {
+  const userId = req.user?.id;
+  
+  if (!userId) {
+    return res.status(401).json({ error: "Brak autoryzacji" });
+  }
+
+  const { 
+    name_en, name_pl, primary_muscle, secondary_muscles,
+    equipment, pattern, sets_default, reps_default, notes 
+  } = req.body;
+
+  if (!name_en && !name_pl) {
+    return res.status(400).json({ error: "Nazwa ćwiczenia jest wymagana" });
+  }
+
+  try {
+    const poolPromise = pool.promise();
+    
+    const secondaryStr = Array.isArray(secondary_muscles) 
+      ? secondary_muscles.join(',') 
+      : (secondary_muscles || '');
+
+    const [result] = await poolPromise.query(
+      `INSERT INTO user_custom_exercises 
+       (user_id, name_en, name_pl, primary_muscle, secondary_muscles,
+        equipment, pattern, sets_default, reps_default, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId, 
+        name_en || name_pl, 
+        name_pl || name_en,
+        primary_muscle || 'other',
+        secondaryStr,
+        equipment || 'bodyweight',
+        pattern || 'accessory',
+        sets_default || 3,
+        reps_default || 10,
+        notes || null
+      ]
+    );
+
+    res.status(201).json({ 
+      id: result.insertId,
+      message: "Ćwiczenie utworzone pomyślnie" 
+    });
+  } catch (error) {
+    console.error("Błąd tworzenia własnego ćwiczenia:", error);
+    res.status(500).json({ error: "Błąd serwera" });
+  }
+};
+
+/**
+ * Aktualizuje własne ćwiczenie
+ */
+exports.updateCustomExercise = async (req, res) => {
+  const userId = req.user?.id;
+  const { id } = req.params;
+  
+  if (!userId) {
+    return res.status(401).json({ error: "Brak autoryzacji" });
+  }
+
+  const { 
+    name_en, name_pl, primary_muscle, secondary_muscles,
+    equipment, pattern, sets_default, reps_default, notes 
+  } = req.body;
+
+  try {
+    const poolPromise = pool.promise();
+    
+    // Sprawdź czy ćwiczenie należy do użytkownika
+    const [existing] = await poolPromise.query(
+      "SELECT id FROM user_custom_exercises WHERE id = ? AND user_id = ?",
+      [id, userId]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ error: "Ćwiczenie nie znalezione" });
+    }
+
+    const secondaryStr = Array.isArray(secondary_muscles) 
+      ? secondary_muscles.join(',') 
+      : secondary_muscles;
+
+    await poolPromise.query(
+      `UPDATE user_custom_exercises SET
+         name_en = COALESCE(?, name_en),
+         name_pl = COALESCE(?, name_pl),
+         primary_muscle = COALESCE(?, primary_muscle),
+         secondary_muscles = COALESCE(?, secondary_muscles),
+         equipment = COALESCE(?, equipment),
+         pattern = COALESCE(?, pattern),
+         sets_default = COALESCE(?, sets_default),
+         reps_default = COALESCE(?, reps_default),
+         notes = COALESCE(?, notes)
+       WHERE id = ? AND user_id = ?`,
+      [name_en, name_pl, primary_muscle, secondaryStr, 
+       equipment, pattern, sets_default, reps_default, notes, id, userId]
+    );
+
+    res.json({ message: "Ćwiczenie zaktualizowane" });
+  } catch (error) {
+    console.error("Błąd aktualizacji własnego ćwiczenia:", error);
+    res.status(500).json({ error: "Błąd serwera" });
+  }
+};
+
+/**
+ * Usuwa własne ćwiczenie
+ */
+exports.deleteCustomExercise = async (req, res) => {
+  const userId = req.user?.id;
+  const { id } = req.params;
+  
+  if (!userId) {
+    return res.status(401).json({ error: "Brak autoryzacji" });
+  }
+
+  try {
+    const poolPromise = pool.promise();
+    
+    const [result] = await poolPromise.query(
+      "DELETE FROM user_custom_exercises WHERE id = ? AND user_id = ?",
+      [id, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Ćwiczenie nie znalezione" });
+    }
+
+    res.json({ message: "Ćwiczenie usunięte" });
+  } catch (error) {
+    console.error("Błąd usuwania własnego ćwiczenia:", error);
     res.status(500).json({ error: "Błąd serwera" });
   }
 };

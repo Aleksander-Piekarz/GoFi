@@ -4,6 +4,27 @@ const { auth } = require('../middleware/auth');
 const ctrl = require('../controllers/exerciseController');
 const { pool } = require('../lib/db'); 
 
+// =====================================================
+// Custom Exercises - własne ćwiczenia użytkownika
+// UWAGA: Te routes MUSZĄ być przed /:code, inaczej "custom" zostanie potraktowane jako code!
+// =====================================================
+
+// Pobierz własne ćwiczenia użytkownika
+router.get('/custom/list', auth(true), ctrl.getUserCustomExercises);
+
+// Utwórz nowe własne ćwiczenie
+router.post('/custom', auth(true), ctrl.createCustomExercise);
+
+// Aktualizuj własne ćwiczenie
+router.put('/custom/:id', auth(true), ctrl.updateCustomExercise);
+
+// Usuń własne ćwiczenie
+router.delete('/custom/:id', auth(true), ctrl.deleteCustomExercise);
+
+// =====================================================
+// Standard Exercises
+// =====================================================
+
 // Pobierz listę wszystkich ćwiczeń (z filtrowaniem i paginacją)
 router.get('/', auth(true), ctrl.getAllExercises);
 
@@ -36,7 +57,7 @@ router.get('/search', auth(true), async (req,res) => {
   res.json(rows);
 });
 
-// Pobierz pełne dane ćwiczenia po kodzie
+// Pobierz pełne dane ćwiczenia po kodzie (MUSI BYĆ NA KOŃCU - bo /:code łapie wszystko)
 router.get('/:code', auth(true), ctrl.getExerciseByCode);
 
 // Pobierz alternatywy dla ćwiczenia
