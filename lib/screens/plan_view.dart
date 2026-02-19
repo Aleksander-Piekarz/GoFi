@@ -5,6 +5,7 @@ import '../app/theme.dart';
 import '../services/api/providers.dart';
 import '../utils/language_settings.dart';
 import '../models/exercise.dart';
+import '../widgets/exercise_image.dart';
 import 'exercise_detail_screen.dart';
 
 /// Helper do wyciągnięcia nazwy ćwiczenia (obsługuje różne formaty)
@@ -44,6 +45,7 @@ typedef OnExerciseRemoved = void Function(
 
 typedef OnDayAdded = void Function(Map<String, dynamic> day);
 typedef OnDayRemoved = void Function(int dayIndex);
+typedef OnDayChanged = void Function(int dayIndex, Map<String, dynamic> newDayData);
 typedef OnPlanExport = void Function();
 typedef OnPlanImport = void Function();
 
@@ -54,6 +56,7 @@ class PlanView extends ConsumerWidget {
   final OnExerciseRemoved? onExerciseRemoved;
   final OnDayAdded? onDayAdded;
   final OnDayRemoved? onDayRemoved;
+  final OnDayChanged? onDayChanged;
   final OnPlanExport? onPlanExport;
   final OnPlanImport? onPlanImport;
   final String unitSystem;
@@ -66,6 +69,7 @@ class PlanView extends ConsumerWidget {
     this.onExerciseRemoved,
     this.onDayAdded,
     this.onDayRemoved,
+    this.onDayChanged,
     this.onPlanExport,
     this.onPlanImport,
     this.unitSystem = 'metric',
@@ -644,6 +648,156 @@ class PlanView extends ConsumerWidget {
     }
   }
 
+  Future<void> _showEditDayDialog(BuildContext context, WidgetRef ref, int dayIndex, Map dayData) async {
+    final lang = ref.read(languageProvider);
+    final focusCtrl = TextEditingController(text: (dayData['focus'] ?? '').toString());
+    
+    final currentDayName = lang == 'pl'
+        ? (dayData['day_pl'] ?? dayData['day'] ?? '').toString()
+        : (dayData['day_en'] ?? dayData['day'] ?? '').toString();
+    
+    String? selectedDay = currentDayName;
+    
+    final daysOfWeek = lang == 'pl' 
+        ? ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela']
+        : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    
+    final daysOfWeekEn = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final daysOfWeekPl = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
+    
+    // Upewnij się, że selectedDay jest w liście
+    if (!daysOfWeek.contains(selectedDay)) {
+      selectedDay = null;
+    }
+    
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.edit_calendar_rounded, color: AppColors.accent, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(lang == 'pl' ? 'Edytuj dzień' : 'Edit day'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                lang == 'pl' ? 'Dzień tygodnia:' : 'Day of week:',
+                style: TextStyle(color: Colors.grey[400], fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedDay,
+                    hint: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        lang == 'pl' ? 'Wybierz dzień...' : 'Select day...',
+                        style: TextStyle(color: Colors.grey[500]),
+                      ),
+                    ),
+                    isExpanded: true,
+                    dropdownColor: const Color(0xFF2A2A2A),
+                    borderRadius: BorderRadius.circular(12),
+                    icon: const Padding(
+                      padding: EdgeInsets.only(right: 12),
+                      child: Icon(Icons.arrow_drop_down, color: AppColors.accent),
+                    ),
+                    items: daysOfWeek.map((day) {
+                      return DropdownMenuItem(
+                        value: day,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(day, style: const TextStyle(color: Colors.white)),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setDialogState(() => selectedDay = value);
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                lang == 'pl' ? 'Focus (opcjonalnie):' : 'Focus (optional):',
+                style: TextStyle(color: Colors.grey[400], fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: focusCtrl,
+                decoration: InputDecoration(
+                  hintText: lang == 'pl' ? 'np. Klatka, Barki' : 'e.g. Chest, Shoulders',
+                  hintStyle: TextStyle(color: Colors.grey[600]),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.05),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.accent),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(lang == 'pl' ? 'Anuluj' : 'Cancel'),
+            ),
+            FilledButton(
+              onPressed: selectedDay == null ? null : () {
+                final dayIdx = daysOfWeek.indexOf(selectedDay!);
+                final newDayData = Map<String, dynamic>.from(dayData);
+                newDayData['day'] = selectedDay;
+                newDayData['dayName'] = selectedDay;
+                newDayData['day_en'] = daysOfWeekEn[dayIdx];
+                newDayData['day_pl'] = daysOfWeekPl[dayIdx];
+                newDayData['dayIndex'] = dayIdx;
+                newDayData['focus'] = focusCtrl.text;
+                Navigator.pop(ctx, newDayData);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: selectedDay == null ? Colors.grey[700] : AppColors.accent,
+              ),
+              child: Text(lang == 'pl' ? 'Zapisz' : 'Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    
+    if (result != null) {
+      onDayChanged?.call(dayIndex, result);
+    }
+  }
+
   Future<void> _showAddExerciseDialog(BuildContext context, WidgetRef ref, int dayIndex) async {
     final selected = await _showExerciseLibraryPicker(context, ref);
     if (selected != null) {
@@ -807,6 +961,24 @@ class PlanView extends ConsumerWidget {
                         ],
                       ),
                     ),
+                    if (isEditable && onDayChanged != null) ...[
+                      const SizedBox(width: 8),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _showEditDayDialog(context, ref, dayIndex, dayData),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.edit_rounded, color: AppColors.accent, size: 20),
+                          ),
+                        ),
+                      ),
+                    ],
                     if (isEditable && onDayRemoved != null) ...[
                       const SizedBox(width: 10),
                       _buildDeleteButton(() => _confirmDeleteDay(context, ref, dayIndex)),
@@ -1850,10 +2022,11 @@ class _ExerciseLibraryPickerState extends State<_ExerciseLibraryPicker> {
                       width: 50,
                       height: 50,
                       color: Colors.black26,
-                      child: Image.asset(
-                        'assets/images/exercises/${ex.code}.gif',
+                      child: ExerciseImage(
+                        exerciseCode: ex.code,
+                        width: 50,
+                        height: 50,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.fitness_center, color: Colors.white38),
                       ),
                     ),
                   ),

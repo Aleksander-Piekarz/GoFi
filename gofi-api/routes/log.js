@@ -116,6 +116,9 @@ router.get("/exercise/:code", auth(true), async (req, res) => {
     const sql = `
       SELECT 
         MAX(T1.weight) AS max_weight,
+        SUM(T1.reps) AS total_reps,
+        COUNT(T1.id) AS total_sets,
+        SUM(T1.weight * T1.reps) AS total_volume,
         DATE(T2.date_completed) AS date
       FROM workout_log_sets AS T1
       JOIN workout_logs AS T2 ON T1.workout_log_id = T2.id
@@ -270,47 +273,40 @@ router.post("/latest-for-exercises", auth(true), async (req, res) => {
   const userId = req.user.id;
   const { exerciseCodes } = req.body;
 
+  // Jeśli tablica jest pusta lub jej nie ma, zwróć pusty obiekt NATYCHMIAST
   if (!exerciseCodes || !Array.isArray(exerciseCodes) || exerciseCodes.length === 0) {
     return res.json({});
   }
 
   try {
+    // Uproszczone zapytanie: pobieramy ostatnie serie dla podanych kodów
     const sql = `
-      WITH RankedSets AS (
-        SELECT
-          s.exercise_code,
-          s.weight,
-          s.reps,
-          w.date_completed,
-          ROW_NUMBER() OVER(
-            PARTITION BY s.exercise_code 
-            ORDER BY w.date_completed DESC, s.set_number ASC
-          ) as rn
-        FROM workout_log_sets s
-        JOIN workout_logs w ON s.workout_log_id = w.id
-        WHERE s.user_id = ? AND s.exercise_code IN (?)
+      SELECT s.exercise_code, s.weight, s.reps
+      FROM workout_log_sets s
+      WHERE s.id IN (
+        SELECT MAX(id)
+        FROM workout_log_sets
+        WHERE user_id = ? AND exercise_code IN (?)
+        GROUP BY exercise_code
       )
-      SELECT exercise_code, weight, reps
-      FROM RankedSets
-      WHERE rn = 1;
     `;
 
-    // ⭐️ Używa pool.promise()
     const [rows] = await pool.promise().query(sql, [userId, exerciseCodes]);
 
-    const resultMap = rows.reduce((acc, row) => {
-      acc[row.exercise_code] = {
-        weight: row.weight.toString(),
-        reps: row.reps,
+    const resultMap = {};
+    rows.forEach(row => {
+      resultMap[row.exercise_code] = {
+        weight: row.weight ? row.weight.toString() : "0",
+        reps: row.reps || 0,
       };
-      return acc;
-    }, {});
+    });
 
     res.json(resultMap);
 
-  } catch (error){
-    console.error("Błąd pobierania ostatnich logów dla ćwiczeń:", error);
-    res.status(500).json({ error: "Błąd serwera" });
+  } catch (error) {
+    console.error("Błąd pobierania ostatnich logów:", error);
+    // Zwracamy pusty obiekt zamiast błędu 500, żeby aplikacja nie utknęła na kółku
+    res.json({}); 
   }
 });
 

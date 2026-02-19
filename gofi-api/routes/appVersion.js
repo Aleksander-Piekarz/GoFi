@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 
 const CURRENT_VERSION = {
-  version: '1.0.0',
-  buildNumber: 1,
+  version: '1.1.1',
+  buildNumber: 2,
   minSupportedVersion: '1.0.0',
   forceUpdate: false,
   releaseNotes: 'Pierwsza wersja aplikacji GoFi!',
-  androidDownloadUrl: 'https://twoj-serwer.pl/downloads/gofi-latest.apk',
+  androidDownloadUrl: 'https://gofi-app.duckdns.org/downloads/gofi-latest.apk',
   iosDownloadUrl: 'https://apps.apple.com/app/gofi/id123456789',
   releaseDate: '2026-02-18'
 };

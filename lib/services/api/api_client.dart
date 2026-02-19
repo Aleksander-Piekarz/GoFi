@@ -28,9 +28,18 @@ class ApiClient {
   final Map<String, String> defaultHeaders;
   final Duration timeout;
 
-  Uri _u(String path, [Map<String, dynamic>? query]) =>
-      Uri.parse('$baseUrl$path')
-          .replace(queryParameters: query?.map((k, v) => MapEntry(k, '$v')));
+Uri _u(String path, [Map<String, dynamic>? query]) {
+  String fullUrl = baseUrl;
+  
+  if (!fullUrl.endsWith('/')) {
+    fullUrl += '/';
+  }
+  
+  String cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  
+  return Uri.parse('$fullUrl$cleanPath')
+      .replace(queryParameters: query?.map((k, v) => MapEntry(k, '$v')));
+}
 
   Future<Map<String, String>> _headers([Map<String, String>? extra]) async {
     final tok = await getAuthToken();

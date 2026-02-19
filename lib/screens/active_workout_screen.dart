@@ -7,6 +7,7 @@ import '../services/api/workout_session_service.dart';
 import '../utils/converters.dart';
 import '../utils/language_settings.dart';
 import '../models/exercise.dart';
+import '../widgets/exercise_image.dart';
 import 'exercise_detail_screen.dart';
 
 
@@ -103,6 +104,9 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> with 
   SetLog? _currentActiveSet;
   ExerciseLog? _currentActiveExercise;
   Timer? _setTimer;
+  
+  // UI preferences
+  bool _showSetDuration = true; // Czy pokazywać czas trwania serii
 
   @override
   void initState() {
@@ -186,7 +190,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> with 
       final exercise = exMap as Map;
       final String code = exercise['code']?.toString() ?? 'UNKNOWN';
       final String name = exercise['name']?.toString() ?? 'Nieznane ćwiczenie';
-      final int setCount = exercise['sets'] as int? ?? 3;
+      final int setCount = int.tryParse(exercise['sets']?.toString() ?? '') ?? 3;
       final String suggestedReps = exercise['reps']?.toString() ?? '8';
 
       
@@ -527,52 +531,156 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> with 
     }
   }
 
+  /// Dialog wyjścia z treningu
+  Future<void> _showExitDialog() async {
+    final lang = ref.read(languageProvider);
+    
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                lang == 'pl' ? 'Wyjść z treningu?' : 'Exit workout?',
+                style: const TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          lang == 'pl' 
+              ? 'Trening jest w trakcie. Co chcesz zrobić?'
+              : 'Workout is in progress. What do you want to do?',
+          style: TextStyle(color: Colors.grey[400]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'cancel'),
+            child: Text(lang == 'pl' ? 'Kontynuuj trening' : 'Continue workout'),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx, 'pause'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.orange,
+              side: const BorderSide(color: Colors.orange),
+            ),
+            child: Text(lang == 'pl' ? 'Dokończ później' : 'Continue later'),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx, 'exit'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: const BorderSide(color: Colors.red),
+            ),
+            child: Text(lang == 'pl' ? 'Wyjdź bez zapisu' : 'Exit without saving'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, 'save'),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: Text(lang == 'pl' ? 'Zapisz i wyjdź' : 'Save and exit'),
+          ),
+        ],
+      ),
+    );
+    
+    if (result == 'exit') {
+      // Zakończ sesję bez zapisu
+      if (_sessionId != null) {
+        try {
+          final sessionService = ref.read(workoutSessionServiceProvider);
+          await sessionService.abandonSession(_sessionId!);
+        } catch (e) {
+          print('Error ending session: $e');
+        }
+      }
+      if (mounted) Navigator.of(context).pop();
+    } else if (result == 'pause') {
+      // Wyjdź bez kończenia sesji - sesja zostaje aktywna do wznowienia
+      _workoutTimer?.cancel();
+      _restTimer?.cancel();
+      _setTimer?.cancel();
+      if (mounted) {
+        final lang = ref.read(languageProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(lang == 'pl'
+                ? 'Trening wstrzymany — wznów z ekranu głównego'
+                : 'Workout paused — resume from home screen'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        Navigator.of(context).pop('paused');
+      }
+    } else if (result == 'save') {
+      await _finishWorkout();
+    }
+  }
+
  @override
   Widget build(BuildContext context) {
     final lang = ref.watch(languageProvider);
     final theme = Theme.of(context);
     
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _showExitDialog();
+      },
+      child: Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_planName, style: const TextStyle(fontSize: 16)),
-                  const SizedBox(height: 2),
-                ],
-              ),
-            ),
-            // Main workout timer
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.timer, size: 16, color: theme.colorScheme.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    _formatTime(_totalWorkoutSeconds),
-                    style: TextStyle(
-                      fontSize: 15, 
-                      color: theme.colorScheme.primary, 
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.close, size: 26),
+          onPressed: _showExitDialog,
+          tooltip: lang == 'pl' ? 'Wyjdź' : 'Exit',
         ),
+        title: Text(_planName, style: const TextStyle(fontSize: 16)),
         actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'toggle_set_duration') {
+                setState(() {
+                  _showSetDuration = !_showSetDuration;
+                });
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'toggle_set_duration',
+                child: Row(
+                  children: [
+                    Icon(
+                      _showSetDuration ? Icons.visibility_off : Icons.visibility,
+                      size: 20,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      _showSetDuration 
+                          ? (lang == 'pl' ? 'Ukryj czas serii' : 'Hide set duration')
+                          : (lang == 'pl' ? 'Pokaż czas serii' : 'Show set duration'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           if (_exerciseLogs != null)
             Padding(
               padding: const EdgeInsets.only(right: 8.0),
@@ -658,6 +766,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> with 
             ),
         ],
       ),
+    ),
     );
   }
   
@@ -693,6 +802,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> with 
         child: Row(
           children: [
             // Animated timer circle
+            if (_showSetDuration)
             Container(
               width: 70,
               height: 70,
@@ -725,6 +835,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> with 
                 ),
               ),
             ),
+            if (_showSetDuration)
             const SizedBox(width: 20),
             
             // Exercise info
@@ -836,12 +947,11 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> with 
                       width: 60,
                       height: 60,
                       color: Colors.black26,
-                      child: Image.asset(
-                        exercise.imagePath,
+                      child: ExerciseImage(
+                        exerciseCode: exercise.code,
+                        width: 60,
+                        height: 60,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const Center(
-                          child: Icon(Icons.fitness_center, color: Colors.white38),
-                        ),
                       ),
                     ),
                   ),
@@ -919,12 +1029,10 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> with 
                       height: 180,
                       width: double.infinity,
                       color: Colors.black,
-                      child: Image.asset(
-                        exercise.imagePath,
+                      child: ExerciseImage(
+                        exerciseCode: exercise.code,
+                        height: 180,
                         fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => const Center(
-                          child: Icon(Icons.fitness_center, color: Colors.white24, size: 48),
-                        ),
                       ),
                     ),
                   ),
@@ -1067,7 +1175,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> with 
                       color: isCompleted ? Colors.grey : (isInProgress ? theme.colorScheme.primary : theme.textTheme.bodyLarge?.color),
                     ),
                   ),
-                  if (set.durationSeconds > 0 || isInProgress)
+                  if (_showSetDuration && (set.durationSeconds > 0 || isInProgress))
                     Text(
                       _formatTime(set.durationSeconds),
                       style: TextStyle(

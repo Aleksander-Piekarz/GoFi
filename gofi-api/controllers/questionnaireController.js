@@ -348,41 +348,37 @@ exports.getLatestAnswers = async (req, res) => {
 exports.updateLatestPlan = async (req, res) => {
     try {
         const userId = req.user?.id;
-        if (!userId) return res.status(401).json({ error: "Unauthorized" });
+        let plan = req.body;
         
-        const plan = req.body;
-        if (!plan || !plan.week || !Array.isArray(plan.week)) {
-            return res.status(400).json({ error: "Nieprawidłowy format planu" });
-        }
+        if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
         const poolPromise = pool.promise();
-        
-        // Znajdź ostatni plan użytkownika
-        const [rows] = await poolPromise.query(
-            "SELECT id FROM plans WHERE user_id=? ORDER BY id DESC LIMIT 1",
-            [userId]
+
+        // Znajdź istniejący plan użytkownika (najnowszy)
+        const [existing] = await poolPromise.query(
+            "SELECT id FROM plans WHERE user_id=? ORDER BY id DESC LIMIT 1", [userId]
         );
-        
-        if (!rows.length) {
-            return res.status(404).json({ error: "Brak planu do aktualizacji" });
+
+        let planId;
+        if (existing.length > 0) {
+            // UPDATE istniejącego planu zamiast tworzenia kopii
+            await poolPromise.query(
+                "UPDATE plans SET plan_json=? WHERE id=?",
+                [JSON.stringify(plan), existing[0].id]
+            );
+            planId = existing[0].id;
+        } else {
+            // Brak planu - stwórz nowy
+            const [result] = await poolPromise.query(
+                "INSERT INTO plans (user_id, plan_json, created_at) VALUES (?, ?, NOW())",
+                [userId, JSON.stringify(plan)]
+            );
+            planId = result.insertId;
         }
-        
-        const planId = rows[0].id;
-        
-        // Aktualizuj plan
-        await poolPromise.query(
-            "UPDATE plans SET plan_json = ? WHERE id = ?",
-            [JSON.stringify(plan), planId]
-        );
 
-        res.json({
-            ok: true,
-            planId: planId,
-            plan: plan
-        });
-
+        res.json({ ok: true, planId, plan });
     } catch (error) {
-        console.error("Błąd w updateLatestPlan:", error);
+        console.error("Błąd zapisu:", error);
         res.status(500).json({ error: "Błąd serwera." });
     }
 };

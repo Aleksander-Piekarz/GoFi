@@ -45,7 +45,7 @@ class AppUpdateInfo {
 
 class AppVersionService {
   final ApiClient api;
-  static const String currentVersion = '1.0.0';
+  static const String currentVersion = '1.1.3';
   
   AppVersionService({required this.api});
 

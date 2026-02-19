@@ -37,6 +37,7 @@ class ExerciseService {
     int page = 1,
     int limit = 50,
     String? muscle,
+    String? bodyPart,
     String? equipment,
     String? difficulty,
     String? search,
@@ -47,6 +48,7 @@ class ExerciseService {
         'limit': limit.toString(),
       };
       if (muscle != null) queryParams['muscle'] = muscle;
+      if (bodyPart != null) queryParams['body_part'] = bodyPart;
       if (equipment != null) queryParams['equipment'] = equipment;
       if (difficulty != null) queryParams['difficulty'] = difficulty;
       if (search != null && search.isNotEmpty) queryParams['search'] = search;

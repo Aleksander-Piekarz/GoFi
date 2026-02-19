@@ -4,17 +4,62 @@ import '../models/exercise.dart';
 import '../services/api/providers.dart';
 import '../utils/language_settings.dart';
 import '../app/theme.dart';
+import '../widgets/exercise_image.dart';
 import 'exercise_detail_screen.dart';
 
 /// Provider dla wyszukiwania i filtrowania ćwiczeń
 final exerciseSearchProvider = StateProvider<String>((ref) => '');
+final exerciseBodyPartFilterProvider = StateProvider<String?>((ref) => null);
 final exerciseMuscleFilterProvider = StateProvider<String?>((ref) => null);
 final exerciseEquipmentFilterProvider = StateProvider<String?>((ref) => null);
 final exerciseDifficultyFilterProvider = StateProvider<String?>((ref) => null);
 
+/// Mapowanie primary_muscle → body_part (dla custom exercises)
+String _mapMuscleToBodyPart(String? muscle) {
+  if (muscle == null) return 'FULL_BODY';
+  switch (muscle.toLowerCase()) {
+    case 'chest':
+    case 'pectorals':
+      return 'CHEST';
+    case 'back':
+    case 'lats':
+    case 'traps':
+    case 'upper back':
+    case 'lower back':
+    case 'erector spinae':
+      return 'BACK';
+    case 'shoulders':
+    case 'deltoids':
+    case 'delts':
+      return 'SHOULDERS';
+    case 'biceps':
+    case 'triceps':
+    case 'forearms':
+    case 'brachialis':
+      return 'ARMS';
+    case 'quads':
+    case 'quadriceps':
+    case 'hamstrings':
+    case 'glutes':
+    case 'calves':
+    case 'hip flexors':
+    case 'adductors':
+    case 'abductors':
+      return 'LEGS';
+    case 'abs':
+    case 'core':
+    case 'obliques':
+    case 'abdominals':
+      return 'CORE';
+    default:
+      return 'FULL_BODY';
+  }
+}
+
 /// Provider dla listy ćwiczeń z filtrami (w tym własne ćwiczenia)
 final filteredExercisesProvider = FutureProvider<List<Exercise>>((ref) async {
   final search = ref.watch(exerciseSearchProvider);
+  final bodyPart = ref.watch(exerciseBodyPartFilterProvider);
   final muscle = ref.watch(exerciseMuscleFilterProvider);
   final equipment = ref.watch(exerciseEquipmentFilterProvider);
   final difficulty = ref.watch(exerciseDifficultyFilterProvider);
@@ -24,6 +69,7 @@ final filteredExercisesProvider = FutureProvider<List<Exercise>>((ref) async {
   // Pobierz standardowe ćwiczenia
   final standardExercises = await exerciseService.getAllExercises(
         search: search.isNotEmpty ? search : null,
+        bodyPart: bodyPart,
         muscle: muscle,
         equipment: equipment,
         difficulty: difficulty,
@@ -41,7 +87,7 @@ final filteredExercisesProvider = FutureProvider<List<Exercise>>((ref) async {
       'name': {'en': json['name_en'] ?? '', 'pl': json['name_pl'] ?? ''},
       'pattern': json['pattern'] ?? 'accessory',
       'mechanics': 'compound',
-      'difficulty': 'beginner',
+      'difficulty': json['difficulty'] ?? 'beginner',
       'equipment': json['equipment'] ?? 'body weight',
       'primary_muscle': json['primary_muscle'] ?? 'other',
       'secondary_muscles': json['secondary_muscles'] ?? [],
@@ -64,8 +110,13 @@ final filteredExercisesProvider = FutureProvider<List<Exercise>>((ref) async {
         return false;
       }
     }
+    if (bodyPart != null) {
+      final exBodyPart = _mapMuscleToBodyPart(ex.primaryMuscle);
+      if (exBodyPart != bodyPart.toUpperCase()) return false;
+    }
     if (muscle != null && ex.primaryMuscle != muscle) return false;
     if (equipment != null && ex.equipment != equipment) return false;
+    if (difficulty != null && ex.difficulty != difficulty) return false;
     return true;
   }).toList();
   
@@ -100,6 +151,13 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showCreateCustomExerciseDialog(context, lang),
+        backgroundColor: AppColors.accent,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: Text(lang == 'pl' ? 'Własne' : 'Custom'),
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -341,23 +399,35 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
+          // Filtr części ciała (główny, używa body_part z JSON)
           _buildFilterDropdown(
-            label: AppTranslations.get('primary_muscle', lang),
-            value: ref.watch(exerciseMuscleFilterProvider),
+            label: lang == 'pl' ? 'Część ciała' : 'Body part',
+            value: ref.watch(exerciseBodyPartFilterProvider),
             items: [
-              'abs',
-              'biceps',
-              'triceps',
-              'chest',
-              'back',
-              'shoulders',
-              'quads',
-              'hamstrings',
-              'glutes',
-              'calves'
+              'CHEST',
+              'BACK',
+              'SHOULDERS',
+              'ARMS',
+              'LEGS',
+              'CORE',
+              'CARDIO',
+              'FULL_BODY',
             ],
-            onChanged: (value) =>
-                ref.read(exerciseMuscleFilterProvider.notifier).state = value,
+            displayLabels: {
+              'CHEST': lang == 'pl' ? 'Klatka' : 'Chest',
+              'BACK': lang == 'pl' ? 'Plecy' : 'Back',
+              'SHOULDERS': lang == 'pl' ? 'Barki' : 'Shoulders',
+              'ARMS': lang == 'pl' ? 'Ramiona' : 'Arms',
+              'LEGS': lang == 'pl' ? 'Nogi' : 'Legs',
+              'CORE': lang == 'pl' ? 'Brzuch/Core' : 'Core',
+              'CARDIO': lang == 'pl' ? 'Cardio' : 'Cardio',
+              'FULL_BODY': lang == 'pl' ? 'Całe ciało' : 'Full body',
+            },
+            onChanged: (value) {
+              ref.read(exerciseBodyPartFilterProvider.notifier).state = value;
+              // Reset muscle filter when body part is changed
+              ref.read(exerciseMuscleFilterProvider.notifier).state = null;
+            },
             lang: lang,
           ),
           const SizedBox(width: 8),
@@ -371,7 +441,9 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
               'cable',
               'machine',
               'kettlebell',
-              'band'
+              'band',
+              'ez barbell',
+              'smith machine',
             ],
             onChanged: (value) => ref
                 .read(exerciseEquipmentFilterProvider.notifier)
@@ -405,12 +477,14 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
   }
 
   bool _hasActiveFilters() {
-    return ref.read(exerciseMuscleFilterProvider) != null ||
+    return ref.read(exerciseBodyPartFilterProvider) != null ||
+        ref.read(exerciseMuscleFilterProvider) != null ||
         ref.read(exerciseEquipmentFilterProvider) != null ||
         ref.read(exerciseDifficultyFilterProvider) != null;
   }
 
   void _resetFilters() {
+    ref.read(exerciseBodyPartFilterProvider.notifier).state = null;
     ref.read(exerciseMuscleFilterProvider.notifier).state = null;
     ref.read(exerciseEquipmentFilterProvider.notifier).state = null;
     ref.read(exerciseDifficultyFilterProvider.notifier).state = null;
@@ -422,7 +496,15 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
     required List<String> items,
     required Function(String?) onChanged,
     required String lang,
+    Map<String, String>? displayLabels,
   }) {
+    String getDisplayText(String item) {
+      if (displayLabels != null && displayLabels.containsKey(item)) {
+        return displayLabels[item]!;
+      }
+      return _translateFilterItem(item, lang);
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
@@ -451,7 +533,7 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
             ...items.map((item) => DropdownMenuItem(
                   value: item,
                   child: Text(
-                    _translateFilterItem(item, lang),
+                    getDisplayText(item),
                     style: const TextStyle(color: Colors.white),
                   ),
                 )),
@@ -463,48 +545,35 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
   }
 
   String _translateFilterItem(String item, String lang) {
-    // Użyj metod z modelu Exercise do tłumaczeń
-    final dummyExercise = Exercise(
-      code: '',
-      name: {},
-      pattern: '',
-      mechanics: '',
-      difficulty: item,
-      equipment: item,
-      primaryMuscle: item,
-      secondaryMuscles: [],
-      description: '',
-      instructions: {},
-      images: [],
-      commonMistakes: {},
-      safety: ExerciseSafety(requiresSpotter: false, excludedInjuries: []),
-    );
-
-    // Sprawdź czy to difficulty, equipment czy muscle
-    if (['beginner', 'intermediate', 'advanced'].contains(item.toLowerCase())) {
-      return dummyExercise.getDifficultyLabel(lang);
-    } else if ([
-      'body weight',
-      'barbell',
-      'dumbbell',
-      'cable',
-      'machine',
-      'kettlebell',
-      'band'
-    ].contains(item.toLowerCase())) {
-      return dummyExercise.getEquipmentLabel(lang);
-    } else {
-      return dummyExercise.getPrimaryMuscleLabel(lang);
-    }
+    // Direct translation map for equipment/difficulty items
+    final labels = <String, Map<String, String>>{
+      'body weight': {'en': 'Bodyweight', 'pl': 'Ciężar ciała'},
+      'barbell': {'en': 'Barbell', 'pl': 'Sztanga'},
+      'dumbbell': {'en': 'Dumbbell', 'pl': 'Hantle'},
+      'cable': {'en': 'Cable', 'pl': 'Wyciąg'},
+      'machine': {'en': 'Machine', 'pl': 'Maszyna'},
+      'kettlebell': {'en': 'Kettlebell', 'pl': 'Kettlebell'},
+      'band': {'en': 'Resistance Band', 'pl': 'Gumy oporowe'},
+      'ez barbell': {'en': 'EZ Bar', 'pl': 'Sztanga łamana'},
+      'smith machine': {'en': 'Smith Machine', 'pl': 'Suwnicy Smitha'},
+      'beginner': {'en': 'Beginner', 'pl': 'Początkujący'},
+      'intermediate': {'en': 'Intermediate', 'pl': 'Średniozaawansowany'},
+      'advanced': {'en': 'Advanced', 'pl': 'Zaawansowany'},
+    };
+    return labels[item.toLowerCase()]?[lang] ?? item;
   }
 
   Widget _buildExerciseCard(Exercise exercise, String lang) {
-    return Container(
+    final isCustom = exercise.code.startsWith('custom_');
+    
+    Widget card = Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: AppColors.bgAlt,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(
+          color: isCustom ? AppColors.accent.withOpacity(0.3) : Colors.white.withOpacity(0.05),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.15),
@@ -519,14 +588,13 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
         child: InkWell(
         onTap: () {
           if (widget.selectionMode) {
-            // Zwróć wybrany exercise
             Navigator.pop(context, {
               'code': exercise.code,
               'name': exercise.getName(lang),
               'pattern': exercise.pattern,
               'primary_muscle': exercise.primaryMuscle,
             });
-          } else {
+          } else if (!isCustom) {
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -538,9 +606,10 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
             );
           }
         },
+        onLongPress: isCustom ? () => _showCustomExerciseOptions(exercise, lang) : null,
         child: Row(
           children: [
-            // Miniaturka obrazu z gradientem
+            // Miniaturka obrazu / ikona
             Container(
               width: 100,
               height: 100,
@@ -548,25 +617,18 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.accent.withOpacity(0.3),
-                    AppColors.accentSecondary.withOpacity(0.2),
-                  ],
+                  colors: isCustom
+                      ? [AppColors.accent.withOpacity(0.4), AppColors.accentSecondary.withOpacity(0.3)]
+                      : [AppColors.accent.withOpacity(0.3), AppColors.accentSecondary.withOpacity(0.2)],
                 ),
               ),
-              child: exercise.mainImage.isNotEmpty
-                  ? Image.asset(
-                      exercise.mainImage,
+              child: isCustom
+                  ? const Center(child: Icon(Icons.person, color: Colors.white54, size: 40))
+                  : ExerciseImage(
+                      exerciseCode: exercise.code,
+                      width: 100,
+                      height: 100,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Center(
-                        child: Icon(Icons.fitness_center,
-                            color: Colors.white38, size: 36),
-                      ),
-                    )
-                  : const Center(
-                      child: Icon(Icons.fitness_center,
-                          color: Colors.white38, size: 36),
                     ),
             ),
 
@@ -577,15 +639,38 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      exercise.getName(lang),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: Colors.white,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            exercise.getName(lang),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Colors.white,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isCustom)
+                          Container(
+                            margin: const EdgeInsets.only(left: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              lang == 'pl' ? 'WŁASNE' : 'CUSTOM',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.accent,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -620,7 +705,7 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
               ),
             ),
 
-            // Strzałka
+            // Strzałka / opcje
             Padding(
               padding: const EdgeInsets.only(right: 14),
               child: Container(
@@ -639,6 +724,253 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
           ],
         ),
       ),
+      ),
+    );
+    
+    // Swipe to delete for custom exercises
+    if (isCustom) {
+      return Dismissible(
+        key: Key(exercise.code),
+        direction: DismissDirection.endToStart,
+        background: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.red.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 24),
+          child: const Icon(Icons.delete, color: Colors.white, size: 28),
+        ),
+        confirmDismiss: (direction) async {
+          return await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: const Color(0xFF1E1E1E),
+              title: Text(
+                lang == 'pl' ? 'Usuń ćwiczenie' : 'Delete exercise',
+                style: const TextStyle(color: Colors.white),
+              ),
+              content: Text(
+                lang == 'pl' 
+                    ? 'Czy na pewno chcesz usunąć "${exercise.getName(lang)}"?'
+                    : 'Are you sure you want to delete "${exercise.getName(lang)}"?',
+                style: const TextStyle(color: Colors.grey),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(lang == 'pl' ? 'Anuluj' : 'Cancel',
+                      style: const TextStyle(color: Colors.grey)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Usuń', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
+          ) ?? false;
+        },
+        onDismissed: (_) => _deleteCustomExercise(exercise, lang),
+        child: card,
+      );
+    }
+    
+    return card;
+  }
+  
+  void _showCustomExerciseOptions(Exercise exercise, String lang) {
+    final id = int.tryParse(exercise.code.replaceFirst('custom_', ''));
+    if (id == null) return;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey[600],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              exercise.getName(lang),
+              style: const TextStyle(
+                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.edit, color: Colors.white),
+              title: Text(
+                lang == 'pl' ? 'Edytuj ćwiczenie' : 'Edit exercise',
+                style: const TextStyle(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showEditCustomExerciseDialog(exercise, id, lang);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: Text(
+                lang == 'pl' ? 'Usuń ćwiczenie' : 'Delete exercise',
+                style: const TextStyle(color: Colors.red),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _deleteCustomExercise(exercise, lang);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Future<void> _deleteCustomExercise(Exercise exercise, String lang) async {
+    final id = int.tryParse(exercise.code.replaceFirst('custom_', ''));
+    if (id == null) return;
+    
+    try {
+      await ref.read(exerciseServiceProvider).deleteCustomExercise(id);
+      ref.invalidate(filteredExercisesProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(lang == 'pl' ? 'Ćwiczenie usunięte' : 'Exercise deleted'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(lang == 'pl' ? 'Błąd usuwania: $e' : 'Delete error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+  
+  Future<void> _showEditCustomExerciseDialog(Exercise exercise, int id, String lang) async {
+    final nameEnCtrl = TextEditingController(text: exercise.name['en'] ?? '');
+    final namePlCtrl = TextEditingController(text: exercise.name['pl'] ?? '');
+    final notesCtrl = TextEditingController(text: exercise.description);
+    
+    String selectedMuscle = exercise.primaryMuscle.isNotEmpty ? exercise.primaryMuscle : 'chest';
+    String selectedEquipment = exercise.equipment.isNotEmpty ? exercise.equipment : 'body weight';
+    String selectedDifficulty = exercise.difficulty.isNotEmpty ? exercise.difficulty : 'beginner';
+    
+    final muscleGroups = _getMuscleGroupOptions();
+    final equipmentTypes = _getEquipmentOptions();
+    final difficultyLevels = _getDifficultyOptions();
+    
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            lang == 'pl' ? 'Edytuj ćwiczenie' : 'Edit exercise',
+            style: const TextStyle(fontSize: 18, color: Colors.white),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDialogTextField(nameEnCtrl, lang == 'pl' ? 'Nazwa (EN)' : 'Name (EN)'),
+                const SizedBox(height: 12),
+                _buildDialogTextField(namePlCtrl, lang == 'pl' ? 'Nazwa (PL)' : 'Name (PL)'),
+                const SizedBox(height: 16),
+                _buildDialogDropdown(
+                  label: lang == 'pl' ? 'Partia mięśniowa:' : 'Muscle group:',
+                  value: selectedMuscle,
+                  items: muscleGroups,
+                  onChanged: (v) => setDialogState(() => selectedMuscle = v ?? 'chest'),
+                  lang: lang,
+                ),
+                const SizedBox(height: 16),
+                _buildDialogDropdown(
+                  label: lang == 'pl' ? 'Sprzęt:' : 'Equipment:',
+                  value: selectedEquipment,
+                  items: equipmentTypes,
+                  onChanged: (v) => setDialogState(() => selectedEquipment = v ?? 'body weight'),
+                  lang: lang,
+                ),
+                const SizedBox(height: 16),
+                _buildDialogDropdown(
+                  label: lang == 'pl' ? 'Trudność:' : 'Difficulty:',
+                  value: selectedDifficulty,
+                  items: difficultyLevels,
+                  onChanged: (v) => setDialogState(() => selectedDifficulty = v ?? 'beginner'),
+                  lang: lang,
+                ),
+                const SizedBox(height: 16),
+                _buildDialogTextField(notesCtrl, lang == 'pl' ? 'Notatki' : 'Notes', maxLines: 2),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: Text(lang == 'pl' ? 'Anuluj' : 'Cancel', style: const TextStyle(color: Colors.grey)),
+              onPressed: () => Navigator.of(ctx).pop(),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
+              child: Text(lang == 'pl' ? 'Zapisz' : 'Save'),
+              onPressed: () async {
+                if (nameEnCtrl.text.trim().isEmpty && namePlCtrl.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(lang == 'pl' ? 'Podaj nazwę ćwiczenia' : 'Enter exercise name'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+                
+                try {
+                  await ref.read(exerciseServiceProvider).updateCustomExercise(id, {
+                    'name_en': nameEnCtrl.text.trim().isNotEmpty ? nameEnCtrl.text.trim() : null,
+                    'name_pl': namePlCtrl.text.trim().isNotEmpty ? namePlCtrl.text.trim() : null,
+                    'primary_muscle': selectedMuscle,
+                    'equipment': selectedEquipment,
+                    'difficulty': selectedDifficulty,
+                    'notes': notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+                  });
+                  Navigator.of(ctx).pop();
+                  ref.invalidate(filteredExercisesProvider);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(lang == 'pl' ? 'Ćwiczenie zaktualizowane!' : 'Exercise updated!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Błąd: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -676,44 +1008,17 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
 
   /// Dialog do tworzenia własnego ćwiczenia
   Future<void> _showCreateCustomExerciseDialog(BuildContext context, String lang) async {
-    final nameCtrl = TextEditingController();
-    final setsCtrl = TextEditingController(text: '3');
-    final repsCtrl = TextEditingController(text: '10');
+    final nameEnCtrl = TextEditingController();
+    final namePlCtrl = TextEditingController();
     final notesCtrl = TextEditingController();
     
     String selectedMuscle = 'chest';
     String selectedEquipment = 'body weight';
-    String selectedPattern = 'accessory';
+    String selectedDifficulty = 'beginner';
     
-    final muscleGroups = [
-      {'value': 'chest', 'label_pl': 'Klatka', 'label_en': 'Chest'},
-      {'value': 'back', 'label_pl': 'Plecy', 'label_en': 'Back'},
-      {'value': 'shoulders', 'label_pl': 'Barki', 'label_en': 'Shoulders'},
-      {'value': 'biceps', 'label_pl': 'Biceps', 'label_en': 'Biceps'},
-      {'value': 'triceps', 'label_pl': 'Triceps', 'label_en': 'Triceps'},
-      {'value': 'quads', 'label_pl': 'Nogi - przód', 'label_en': 'Quads'},
-      {'value': 'hamstrings', 'label_pl': 'Nogi - tył', 'label_en': 'Hamstrings'},
-      {'value': 'glutes', 'label_pl': 'Pośladki', 'label_en': 'Glutes'},
-      {'value': 'abs', 'label_pl': 'Brzuch', 'label_en': 'Abs'},
-      {'value': 'calves', 'label_pl': 'Łydki', 'label_en': 'Calves'},
-      {'value': 'forearms', 'label_pl': 'Przedramiona', 'label_en': 'Forearms'},
-      {'value': 'other', 'label_pl': 'Inne', 'label_en': 'Other'},
-    ];
-    
-    final equipmentTypes = [
-      {'value': 'body weight', 'label_pl': 'Masa ciała', 'label_en': 'Body weight'},
-      {'value': 'barbell', 'label_pl': 'Sztanga', 'label_en': 'Barbell'},
-      {'value': 'dumbbell', 'label_pl': 'Hantle', 'label_en': 'Dumbbell'},
-      {'value': 'cable', 'label_pl': 'Wyciąg', 'label_en': 'Cable'},
-      {'value': 'machine', 'label_pl': 'Maszyna', 'label_en': 'Machine'},
-      {'value': 'kettlebell', 'label_pl': 'Kettlebell', 'label_en': 'Kettlebell'},
-      {'value': 'resistance band', 'label_pl': 'Guma', 'label_en': 'Resistance band'},
-    ];
-    
-    final patternTypes = [
-      {'value': 'compound', 'label_pl': 'Złożone', 'label_en': 'Compound'},
-      {'value': 'accessory', 'label_pl': 'Izolowane', 'label_en': 'Accessory'},
-    ];
+    final muscleGroups = _getMuscleGroupOptions();
+    final equipmentTypes = _getEquipmentOptions();
+    final difficultyLevels = _getDifficultyOptions();
 
     await showDialog(
       context: context,
@@ -721,92 +1026,59 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: const Color(0xFF1E1E1E),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(
-            lang == 'pl' ? 'Dodaj własne ćwiczenie' : 'Add custom exercise',
-            style: const TextStyle(fontSize: 18, color: Colors.white),
+          title: Row(
+            children: [
+              Icon(Icons.add_circle, color: AppColors.accent, size: 24),
+              const SizedBox(width: 10),
+              Text(
+                lang == 'pl' ? 'Dodaj własne ćwiczenie' : 'Add custom exercise',
+                style: const TextStyle(fontSize: 17, color: Colors.white),
+              ),
+            ],
           ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Nazwa ćwiczenia
-                TextField(
-                  controller: nameCtrl,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: lang == 'pl' ? 'Nazwa ćwiczenia *' : 'Exercise name *',
-                    labelStyle: const TextStyle(color: Colors.grey),
-                    filled: true,
-                    fillColor: Colors.black26,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+                _buildDialogTextField(
+                  nameEnCtrl, 
+                  lang == 'pl' ? 'Nazwa (EN) *' : 'Name (EN) *',
                 ),
-                
+                const SizedBox(height: 12),
+                _buildDialogTextField(
+                  namePlCtrl, 
+                  lang == 'pl' ? 'Nazwa (PL)' : 'Name (PL)',
+                ),
                 const SizedBox(height: 16),
-                
-                // Partia mięśniowa
-                Text(
-                  lang == 'pl' ? 'Partia mięśniowa:' : 'Muscle group:',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
+                _buildDialogDropdown(
+                  label: lang == 'pl' ? 'Partia mięśniowa:' : 'Muscle group:',
                   value: selectedMuscle,
-                  dropdownColor: const Color(0xFF2A2A2A),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.black26,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  items: muscleGroups.map((m) => DropdownMenuItem(
-                    value: m['value'] as String,
-                    child: Text(lang == 'pl' ? m['label_pl'] as String : m['label_en'] as String),
-                  )).toList(),
+                  items: muscleGroups,
                   onChanged: (v) => setDialogState(() => selectedMuscle = v ?? 'chest'),
+                  lang: lang,
                 ),
-                
                 const SizedBox(height: 16),
-                
-                // Sprzęt
-                Text(
-                  lang == 'pl' ? 'Sprzęt:' : 'Equipment:',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
+                _buildDialogDropdown(
+                  label: lang == 'pl' ? 'Sprzęt:' : 'Equipment:',
                   value: selectedEquipment,
-                  dropdownColor: const Color(0xFF2A2A2A),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.black26,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  items: equipmentTypes.map((e) => DropdownMenuItem(
-                    value: e['value'] as String,
-                    child: Text(lang == 'pl' ? e['label_pl'] as String : e['label_en'] as String),
-                  )).toList(),
+                  items: equipmentTypes,
                   onChanged: (v) => setDialogState(() => selectedEquipment = v ?? 'body weight'),
+                  lang: lang,
                 ),
-                
                 const SizedBox(height: 16),
-                
-                // Notatki
-                TextField(
-                  controller: notesCtrl,
-                  style: const TextStyle(color: Colors.white),
+                _buildDialogDropdown(
+                  label: lang == 'pl' ? 'Trudność:' : 'Difficulty:',
+                  value: selectedDifficulty,
+                  items: difficultyLevels,
+                  onChanged: (v) => setDialogState(() => selectedDifficulty = v ?? 'beginner'),
+                  lang: lang,
+                ),
+                const SizedBox(height: 16),
+                _buildDialogTextField(
+                  notesCtrl, 
+                  lang == 'pl' ? 'Notatki (opcjonalnie)' : 'Notes (optional)', 
                   maxLines: 2,
-                  decoration: InputDecoration(
-                    labelText: lang == 'pl' ? 'Notatki (opcjonalnie)' : 'Notes (optional)',
-                    labelStyle: const TextStyle(color: Colors.grey),
-                    filled: true,
-                    fillColor: Colors.black26,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
                 ),
               ],
             ),
@@ -823,7 +1095,7 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
               style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
               child: Text(lang == 'pl' ? 'Dodaj' : 'Add'),
               onPressed: () async {
-                if (nameCtrl.text.trim().isEmpty) {
+                if (nameEnCtrl.text.trim().isEmpty && namePlCtrl.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(lang == 'pl' ? 'Podaj nazwę ćwiczenia' : 'Enter exercise name'),
@@ -834,21 +1106,24 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
                 }
                 
                 try {
-                  // Utwórz ćwiczenie przez API
+                  final nameEn = nameEnCtrl.text.trim().isNotEmpty 
+                      ? nameEnCtrl.text.trim() 
+                      : namePlCtrl.text.trim();
+                  final namePl = namePlCtrl.text.trim().isNotEmpty 
+                      ? namePlCtrl.text.trim() 
+                      : nameEnCtrl.text.trim();
+                  
                   await ref.read(exerciseServiceProvider).createCustomExercise(
-                    nameEn: nameCtrl.text.trim(),
-                    namePl: nameCtrl.text.trim(),
+                    nameEn: nameEn,
+                    namePl: namePl,
                     primaryMuscle: selectedMuscle,
                     equipment: selectedEquipment,
-                    pattern: selectedPattern,
-                    setsDefault: int.tryParse(setsCtrl.text) ?? 3,
-                    repsDefault: int.tryParse(repsCtrl.text) ?? 10,
+                    pattern: 'accessory',
                     notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
                   );
                   
                   Navigator.of(ctx).pop();
                   
-                  // Pokaż sukces i odśwież listę
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -862,7 +1137,6 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
                         backgroundColor: Colors.green,
                       ),
                     );
-                    // Odśwież listę ćwiczeń
                     ref.invalidate(filteredExercisesProvider);
                   }
                 } catch (e) {
@@ -878,6 +1152,104 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // =====================================================
+  // Shared dialog helpers
+  // =====================================================
+
+  List<Map<String, String>> _getMuscleGroupOptions() => [
+    {'value': 'chest', 'label_pl': 'Klatka', 'label_en': 'Chest'},
+    {'value': 'back', 'label_pl': 'Plecy', 'label_en': 'Back'},
+    {'value': 'shoulders', 'label_pl': 'Barki', 'label_en': 'Shoulders'},
+    {'value': 'biceps', 'label_pl': 'Biceps', 'label_en': 'Biceps'},
+    {'value': 'triceps', 'label_pl': 'Triceps', 'label_en': 'Triceps'},
+    {'value': 'quads', 'label_pl': 'Nogi - przód', 'label_en': 'Quads'},
+    {'value': 'hamstrings', 'label_pl': 'Nogi - tył', 'label_en': 'Hamstrings'},
+    {'value': 'glutes', 'label_pl': 'Pośladki', 'label_en': 'Glutes'},
+    {'value': 'abs', 'label_pl': 'Brzuch', 'label_en': 'Abs'},
+    {'value': 'calves', 'label_pl': 'Łydki', 'label_en': 'Calves'},
+    {'value': 'forearms', 'label_pl': 'Przedramiona', 'label_en': 'Forearms'},
+    {'value': 'lats', 'label_pl': 'Najszersze', 'label_en': 'Lats'},
+    {'value': 'traps', 'label_pl': 'Kapturowe', 'label_en': 'Traps'},
+    {'value': 'other', 'label_pl': 'Inne', 'label_en': 'Other'},
+  ];
+
+  List<Map<String, String>> _getEquipmentOptions() => [
+    {'value': 'body weight', 'label_pl': 'Ciężar ciała', 'label_en': 'Body weight'},
+    {'value': 'barbell', 'label_pl': 'Sztanga', 'label_en': 'Barbell'},
+    {'value': 'dumbbell', 'label_pl': 'Hantle', 'label_en': 'Dumbbell'},
+    {'value': 'cable', 'label_pl': 'Wyciąg', 'label_en': 'Cable'},
+    {'value': 'machine', 'label_pl': 'Maszyna', 'label_en': 'Machine'},
+    {'value': 'kettlebell', 'label_pl': 'Kettlebell', 'label_en': 'Kettlebell'},
+    {'value': 'resistance band', 'label_pl': 'Guma oporowa', 'label_en': 'Resistance band'},
+    {'value': 'ez barbell', 'label_pl': 'Sztanga łamana', 'label_en': 'EZ Bar'},
+    {'value': 'smith machine', 'label_pl': 'Suwnicy Smitha', 'label_en': 'Smith Machine'},
+  ];
+
+  List<Map<String, String>> _getDifficultyOptions() => [
+    {'value': 'beginner', 'label_pl': 'Początkujący', 'label_en': 'Beginner'},
+    {'value': 'intermediate', 'label_pl': 'Średniozaawansowany', 'label_en': 'Intermediate'},
+    {'value': 'advanced', 'label_pl': 'Zaawansowany', 'label_en': 'Advanced'},
+  ];
+
+  Widget _buildDialogTextField(TextEditingController ctrl, String label, {int maxLines = 1}) {
+    return TextField(
+      controller: ctrl,
+      style: const TextStyle(color: Colors.white),
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.grey),
+        filled: true,
+        fillColor: Colors.black26,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.white10),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.accent),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDialogDropdown({
+    required String label,
+    required String value,
+    required List<Map<String, String>> items,
+    required void Function(String?) onChanged,
+    required String lang,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value: items.any((i) => i['value'] == value) ? value : items.first['value'],
+          dropdownColor: const Color(0xFF2A2A2A),
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.black26,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.white10),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+          items: items.map((m) => DropdownMenuItem(
+            value: m['value'],
+            child: Text(lang == 'pl' ? m['label_pl']! : m['label_en']!),
+          )).toList(),
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }

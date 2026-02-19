@@ -4,6 +4,7 @@ import '../models/exercise.dart';
 import '../services/api/providers.dart';
 import '../utils/language_settings.dart';
 import '../app/theme.dart';
+import '../widgets/exercise_image.dart';
 
 /// Ekran szczegółów ćwiczenia z pełnymi danymi
 class ExerciseDetailScreen extends ConsumerStatefulWidget {
@@ -111,26 +112,10 @@ class _ExerciseDetailScreenState extends ConsumerState<ExerciseDetailScreen>
                 fit: StackFit.expand,
                 children: [
                   // Obraz GIF ćwiczenia
-                  if (exercise.mainImage.isNotEmpty)
-                    Image.asset(
-                      exercise.mainImage,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: AppColors.bgAlt,
-                        child: const Center(
-                          child: Icon(Icons.fitness_center,
-                              size: 80, color: Colors.white24),
-                        ),
-                      ),
-                    )
-                  else
-                    Container(
-                      color: AppColors.bgAlt,
-                      child: const Center(
-                        child: Icon(Icons.fitness_center,
-                            size: 80, color: Colors.white24),
-                      ),
-                    ),
+                  ExerciseImage(
+                    exerciseCode: widget.exerciseCode,
+                    fit: BoxFit.contain,
+                  ),
                   // Gradient na dole
                   Positioned(
                     bottom: 0,

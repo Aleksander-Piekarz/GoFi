@@ -488,3 +488,9 @@ final activeWorkoutSessionProvider =
   final service = ref.read(workoutSessionServiceProvider);
   return ActiveWorkoutSessionNotifier(service);
 });
+
+/// Provider sprawdzający czy jest aktywna sesja do wznowienia
+final pausedSessionProvider = FutureProvider<WorkoutSession?>((ref) async {
+  final service = ref.read(workoutSessionServiceProvider);
+  return service.getCurrentSession();
+});

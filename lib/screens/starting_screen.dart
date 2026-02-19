@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/api/providers.dart'; 
-import '../widgets/update_dialog.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
@@ -29,36 +28,11 @@ class _StartingScreenState extends ConsumerState<StartingScreen> {
 
     if (!mounted) return;
 
-
-    _checkForUpdates();
-
     if (tok != null && tok.isNotEmpty) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()), 
       );
-    }
-  }
-
-  Future<void> _checkForUpdates() async {
-    try {
-      final versionService = ref.read(appVersionServiceProvider);
-      final updateInfo = await versionService.checkForUpdate();
-      
-      if (!mounted) return;
-      
-      if (updateInfo != null && updateInfo.needsUpdate) {
-        if (updateInfo.needsForceUpdate) {
-          await UpdateDialog.show(context, updateInfo);
-        } else {
-          await Future.delayed(const Duration(milliseconds: 500));
-          if (mounted) {
-            UpdateDialog.show(context, updateInfo);
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Błąd sprawdzania aktualizacji: $e');
     }
   }
 

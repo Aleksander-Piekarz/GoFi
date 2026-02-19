@@ -18,19 +18,27 @@ router.post("/session/start", auth(true), async (req, res) => {
     );
 
     if (existing.length > 0) {
-      // Return existing session
-      const sessionId = existing[0].id;
-      const [activities] = await pool.promise().query(
-        "SELECT * FROM workout_activities WHERE session_id = ? ORDER BY start_time ASC",
-        [sessionId]
-      );
-      return res.json({ 
-        ok: true, 
-        session_id: sessionId, 
-        resumed: true,
-        activities 
-      });
-    }
+  const sessionId = existing[0].id;
+  const [activities] = await pool.promise().query(
+    "SELECT * FROM workout_activities WHERE session_id = ? ORDER BY start_time ASC",
+    [sessionId]
+  );
+
+  if (activities.length === 0) {
+     await pool.promise().query(
+      `INSERT INTO workout_activities (session_id, user_id, activity_type, start_time, is_active) 
+       VALUES (?, ?, 'preparation', NOW(), TRUE)`,
+      [sessionId, userId]
+    );
+    const [refetched] = await pool.promise().query(
+      "SELECT * FROM workout_activities WHERE session_id = ? ORDER BY start_time ASC",
+      [sessionId]
+    );
+    return res.json({ ok: true, session_id: sessionId, resumed: true, activities: refetched });
+  }
+
+  return res.json({ ok: true, session_id: sessionId, resumed: true, activities });
+}
 
     // Create new session
     const [result] = await pool.promise().query(

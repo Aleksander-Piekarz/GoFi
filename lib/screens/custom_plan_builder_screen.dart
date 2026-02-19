@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/theme.dart';
 import '../services/api/providers.dart';
 import '../models/exercise.dart';
+import '../widgets/exercise_image.dart';
 import 'home_screen.dart';
 
 /// Pomocnicza funkcja do wyciągnięcia nazwy ćwiczenia (obsługuje różne formaty)
@@ -996,14 +997,12 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   leading: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Container(
+                    child: SizedBox(
                       width: 50,
                       height: 50,
-                      color: Colors.black26,
-                      child: Image.asset(
-                        'assets/images/exercises/${ex.code}.gif',
+                      child: ExerciseImage(
+                        exerciseCode: ex.code,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.fitness_center, color: Colors.white38),
                       ),
                     ),
                   ),

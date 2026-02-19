@@ -69,42 +69,70 @@ exports.getAllExercises = async (req, res) => {
     page = 1, 
     limit = 50, 
     muscle, 
+    body_part,
     equipment, 
     difficulty, 
     search,
     pattern 
   } = req.query;
 
+  // Mapowanie grupy mięśniowej na pokrewne wartości primary_muscle
+  const MUSCLE_GROUP_MAP = {
+    'chest': ['chest', 'pectorals'],
+    'back': ['back', 'lats', 'traps', 'upper back', 'lower back', 'lower_back', 'erector spinae', 'erector_spinae', 'spinal erectors', 'levator scapulae'],
+    'shoulders': ['shoulders', 'deltoids', 'delts', 'rotator cuff', 'serratus anterior'],
+    'biceps': ['biceps', 'brachialis'],
+    'triceps': ['triceps'],
+    'abs': ['abs', 'abdominals', 'core', 'obliques', 'rectus abdominis'],
+    'quads': ['quads', 'quadriceps', 'quads_and_glutes', '`quads`'],
+    'hamstrings': ['hamstrings', '`hamstrings`'],
+    'glutes': ['glutes'],
+    'calves': ['calves', 'tibialis anterior'],
+    'forearms': ['forearms'],
+  };
+
   try {
     let exercises = loadExercisesFromJson();
 
-    // Filtrowanie
+    // Filtrowanie po body_part (czyste kategorie z JSON)
+    if (body_part) {
+      const bpUpper = body_part.toUpperCase();
+      exercises = exercises.filter(ex => 
+        ex.body_part?.toUpperCase() === bpUpper
+      );
+    }
+
+    // Filtrowanie po muscle (z mapowaniem grup)
     if (muscle) {
+      const muscleLower = muscle.toLowerCase();
+      const group = MUSCLE_GROUP_MAP[muscleLower] || [muscleLower];
+      
       exercises = exercises.filter(ex => {
-        if (ex.primary_muscle?.toLowerCase() === muscle.toLowerCase()) return true;
-        // secondary_muscles może być: tablicą, stringiem, lub obiektem {en: [], pl: []}
+        const pm = ex.primary_muscle?.toLowerCase();
+        if (group.includes(pm)) return true;
+        
+        // Sprawdź też secondary_muscles
         const secondary = ex.secondary_muscles;
         if (!secondary) return false;
         
-        // Obiekt z en/pl (nowy format)
         if (secondary.en && Array.isArray(secondary.en)) {
-          return secondary.en.some(m => m.toLowerCase() === muscle.toLowerCase());
+          return secondary.en.some(m => group.includes(m.toLowerCase()));
         }
-        // Tablica
         if (Array.isArray(secondary)) {
-          return secondary.some(m => m.toLowerCase() === muscle.toLowerCase());
+          return secondary.some(m => group.includes(m.toLowerCase()));
         }
-        // String
         if (typeof secondary === 'string') {
-          return secondary.toLowerCase().split(',').map(s => s.trim()).includes(muscle.toLowerCase());
+          return secondary.toLowerCase().split(',').map(s => s.trim()).some(m => group.includes(m));
         }
         return false;
       });
     }
 
     if (equipment) {
+      const eqLower = equipment.toLowerCase();
       exercises = exercises.filter(ex => 
-        ex.equipment?.toLowerCase().includes(equipment.toLowerCase())
+        ex.equipment?.toLowerCase() === eqLower ||
+        ex.equipment?.toLowerCase().includes(eqLower)
       );
     }
 
@@ -126,7 +154,8 @@ exports.getAllExercises = async (req, res) => {
         ex.code?.toLowerCase().includes(searchLower) ||
         ex.name?.en?.toLowerCase().includes(searchLower) ||
         ex.name?.pl?.toLowerCase().includes(searchLower) ||
-        ex.primary_muscle?.toLowerCase().includes(searchLower)
+        ex.primary_muscle?.toLowerCase().includes(searchLower) ||
+        ex.body_part?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -257,7 +286,7 @@ exports.getUserCustomExercises = async (req, res) => {
     const poolPromise = pool.promise();
     const [rows] = await poolPromise.query(
       `SELECT id, name_en, name_pl, primary_muscle, secondary_muscles,
-              equipment, pattern, sets_default, reps_default, notes, created_at
+              equipment, difficulty, pattern, sets_default, reps_default, notes, created_at
        FROM user_custom_exercises
        WHERE user_id = ?
        ORDER BY created_at DESC`,
@@ -290,7 +319,7 @@ exports.createCustomExercise = async (req, res) => {
 
   const { 
     name_en, name_pl, primary_muscle, secondary_muscles,
-    equipment, pattern, sets_default, reps_default, notes 
+    equipment, difficulty, pattern, sets_default, reps_default, notes 
   } = req.body;
 
   if (!name_en && !name_pl) {
@@ -307,8 +336,8 @@ exports.createCustomExercise = async (req, res) => {
     const [result] = await poolPromise.query(
       `INSERT INTO user_custom_exercises 
        (user_id, name_en, name_pl, primary_muscle, secondary_muscles,
-        equipment, pattern, sets_default, reps_default, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        equipment, difficulty, pattern, sets_default, reps_default, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId, 
         name_en || name_pl, 
@@ -316,6 +345,7 @@ exports.createCustomExercise = async (req, res) => {
         primary_muscle || 'other',
         secondaryStr,
         equipment || 'bodyweight',
+        difficulty || 'beginner',
         pattern || 'accessory',
         sets_default || 3,
         reps_default || 10,
@@ -346,7 +376,7 @@ exports.updateCustomExercise = async (req, res) => {
 
   const { 
     name_en, name_pl, primary_muscle, secondary_muscles,
-    equipment, pattern, sets_default, reps_default, notes 
+    equipment, difficulty, pattern, sets_default, reps_default, notes 
   } = req.body;
 
   try {
@@ -373,13 +403,14 @@ exports.updateCustomExercise = async (req, res) => {
          primary_muscle = COALESCE(?, primary_muscle),
          secondary_muscles = COALESCE(?, secondary_muscles),
          equipment = COALESCE(?, equipment),
+         difficulty = COALESCE(?, difficulty),
          pattern = COALESCE(?, pattern),
          sets_default = COALESCE(?, sets_default),
          reps_default = COALESCE(?, reps_default),
          notes = COALESCE(?, notes)
        WHERE id = ? AND user_id = ?`,
       [name_en, name_pl, primary_muscle, secondaryStr, 
-       equipment, pattern, sets_default, reps_default, notes, id, userId]
+       equipment, difficulty, pattern, sets_default, reps_default, notes, id, userId]
     );
 
     res.json({ message: "Ćwiczenie zaktualizowane" });

@@ -18,6 +18,8 @@ import 'plan_view.dart';
 import 'questionnaire_screen.dart';
 import 'custom_plan_builder_screen.dart';
 import '../services/api/providers.dart'; 
+import '../services/api/workout_session_service.dart';
+import '../widgets/update_dialog.dart';
 import 'active_workout_screen.dart';
 import 'workout_details_screen.dart'; 
 import 'exercise_library_screen.dart'; 
@@ -88,6 +90,34 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForUpdates();
+  }
+
+  Future<void> _checkForUpdates() async {
+    try {
+      final versionService = ref.read(appVersionServiceProvider);
+      final updateInfo = await versionService.checkForUpdate();
+
+      if (!mounted) return;
+
+      if (updateInfo != null && updateInfo.needsUpdate) {
+        if (updateInfo.needsForceUpdate) {
+          await UpdateDialog.show(context, updateInfo);
+        } else {
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) {
+            UpdateDialog.show(context, updateInfo);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Błąd sprawdzania aktualizacji: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -424,6 +454,9 @@ class _HomeTab extends ConsumerWidget {
             ),
 
             const SizedBox(height: 28),
+
+            // Resume paused workout banner
+            _buildResumeWorkoutBanner(context, ref, todaysWorkout, unitSystem, lang),
             
             // Today's workout section header
             _buildHomeSectionHeader(
@@ -480,6 +513,117 @@ class _HomeTab extends ConsumerWidget {
     );
   }
   
+  Widget _buildResumeWorkoutBanner(BuildContext context, WidgetRef ref, Map? todaysWorkout, String unitSystem, String lang) {
+    final asyncSession = ref.watch(pausedSessionProvider);
+    return asyncSession.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (session) {
+        if (session == null) return const SizedBox.shrink();
+        
+        final startedAt = session.startedAt;
+        final elapsed = DateTime.now().difference(startedAt);
+        final elapsedStr = elapsed.inMinutes > 60
+            ? '${elapsed.inHours}h ${elapsed.inMinutes % 60}min'
+            : '${elapsed.inMinutes}min';
+
+        return Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.orange.withOpacity(0.2), Colors.deepOrange.withOpacity(0.15)],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.pause_circle_filled, color: Colors.orange, size: 28),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          lang == 'pl' ? 'Trening wstrzymany' : 'Workout paused',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Colors.orange,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${session.planName ?? (lang == 'pl' ? 'Trening' : 'Workout')} · $elapsedStr ${lang == 'pl' ? 'temu' : 'ago'}',
+                          style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          if (todaysWorkout != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ActiveWorkoutScreen(
+                                  workout: todaysWorkout,
+                                  unitSystem: unitSystem,
+                                ),
+                              ),
+                            ).then((_) {
+                              ref.invalidate(pausedSessionProvider);
+                            });
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        ),
+                        child: Text(lang == 'pl' ? 'Wznów' : 'Resume',
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () async {
+                          final sessionService = ref.read(workoutSessionServiceProvider);
+                          await sessionService.abandonSession(session.id);
+                          ref.invalidate(pausedSessionProvider);
+                        },
+                        child: Text(
+                          lang == 'pl' ? 'Porzuć' : 'Discard',
+                          style: TextStyle(color: Colors.red[300], fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildHomeSectionHeader(BuildContext context, {required IconData icon, required String title, required Color color}) {
     return Row(
       children: [
@@ -711,14 +855,6 @@ class _HomeTab extends ConsumerWidget {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.arrow_forward, color: Colors.white, size: 18),
-              ),
             ],
           ),
           const SizedBox(height: 18),
@@ -759,7 +895,9 @@ class _HomeTab extends ConsumerWidget {
                       unitSystem: unitSystem,
                     ),
                   ),
-                );
+                ).then((_) {
+                  ref.invalidate(pausedSessionProvider);
+                });
               },
               child: Text(lang == 'pl' ? 'Rozpocznij' : 'Start', style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
@@ -1240,6 +1378,8 @@ class _PlanTab extends ConsumerStatefulWidget {
 class _PlanTabState extends ConsumerState<_PlanTab> {
   Map<String, dynamic>? _editablePlan;
   bool _isSaving = false;
+  bool _isEditMode = false;
+  bool _hasUnsavedChanges = false;
 
   void _updateExercise(
     int dayIndex,
@@ -1254,10 +1394,8 @@ class _PlanTabState extends ConsumerState<_PlanTab> {
       
       setState(() {
         exercises[exerciseIndex] = Map<String, dynamic>.from(newValues);
+        _hasUnsavedChanges = true;
       });
-      
-      // Zapisz do bazy danych w tle
-      _savePlanToDatabase();
 
     } catch (e) {
       print('Błąd podczas aktualizacji ćwiczenia: $e');
@@ -1271,6 +1409,9 @@ class _PlanTabState extends ConsumerState<_PlanTab> {
     
     try {
       await ref.read(questionnaireServiceProvider).updateLatestPlan(_editablePlan!);
+      
+      // Invaliduj planProvider żeby _HomeTab pobrał zaktualizowany plan
+      ref.invalidate(planProvider);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1308,8 +1449,9 @@ class _PlanTabState extends ConsumerState<_PlanTab> {
       
       week[dayIndex] = day;
       
-      setState(() {});
-      _savePlanToDatabase();
+      setState(() {
+        _hasUnsavedChanges = true;
+      });
     } catch (e) {
       print('Błąd podczas dodawania ćwiczenia: $e');
     }
@@ -1327,8 +1469,9 @@ class _PlanTabState extends ConsumerState<_PlanTab> {
         day['exercises'] = exercises;
         week[dayIndex] = day;
         
-        setState(() {});
-        _savePlanToDatabase();
+        setState(() {
+          _hasUnsavedChanges = true;
+        });
       }
     } catch (e) {
       print('Błąd podczas usuwania ćwiczenia: $e');
@@ -1342,8 +1485,9 @@ class _PlanTabState extends ConsumerState<_PlanTab> {
       week.add(day);
       _editablePlan!['week'] = week;
       
-      setState(() {});
-      _savePlanToDatabase();
+      setState(() {
+        _hasUnsavedChanges = true;
+      });
     } catch (e) {
       print('Błąd podczas dodawania dnia: $e');
     }
@@ -1358,11 +1502,35 @@ class _PlanTabState extends ConsumerState<_PlanTab> {
         week.removeAt(dayIndex);
         _editablePlan!['week'] = week;
         
-        setState(() {});
-        _savePlanToDatabase();
+        setState(() {
+          _hasUnsavedChanges = true;
+        });
       }
     } catch (e) {
       print('Błąd podczas usuwania dnia: $e');
+    }
+  }
+
+  void _changeDay(int dayIndex, Map<String, dynamic> newDayData) {
+    if (_editablePlan == null) return;
+    try {
+      final List week = List.from(_editablePlan!['week'] ?? []);
+      
+      if (dayIndex >= 0 && dayIndex < week.length) {
+        // Zachowaj ćwiczenia z oryginalnego dnia jeśli nowe dane ich nie mają
+        final oldDay = Map<String, dynamic>.from(week[dayIndex] as Map);
+        if (newDayData['exercises'] == null || (newDayData['exercises'] as List).isEmpty) {
+          newDayData['exercises'] = oldDay['exercises'];
+        }
+        week[dayIndex] = newDayData;
+        _editablePlan!['week'] = week;
+        
+        setState(() {
+          _hasUnsavedChanges = true;
+        });
+      }
+    } catch (e) {
+      print('Błąd podczas zmiany dnia: $e');
     }
   }
 
@@ -1414,8 +1582,8 @@ class _PlanTabState extends ConsumerState<_PlanTab> {
         if (parsed is Map && parsed.containsKey('week')) {
           setState(() {
             _editablePlan = Map<String, dynamic>.from(parsed);
+            _hasUnsavedChanges = true;
           });
-          _savePlanToDatabase();
           
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -1568,9 +1736,13 @@ class _PlanTabState extends ConsumerState<_PlanTab> {
           }
         }
 
+        final lang = ref.watch(languageProvider);
+
         return RefreshIndicator(
           onRefresh: () async {
             _editablePlan = null;
+            _isEditMode = false;
+            _hasUnsavedChanges = false;
             return ref.refresh(widget.planProvider);
           },
           child: Column(
@@ -1578,58 +1750,121 @@ class _PlanTabState extends ConsumerState<_PlanTab> {
               // Przyciski akcji
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.refresh, size: 18, color: Colors.white),
-                        label: const Text('Nowa ankieta', style: TextStyle(color: Colors.white)),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          side: const BorderSide(color: Colors.white38),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const QuestionnaireScreen()),
-                          );
-                        },
+                child: _isEditMode
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.close, size: 18, color: Colors.white),
+                              label: Text(
+                                lang == 'pl' ? 'Anuluj' : 'Cancel',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                side: const BorderSide(color: Colors.white38),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isEditMode = false;
+                                  // Odrzuć zmiany - ponownie załaduj plan
+                                  _editablePlan = null;
+                                  _hasUnsavedChanges = false;
+                                });
+                                ref.invalidate(widget.planProvider);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton.icon(
+                              icon: _isSaving
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.save_rounded, size: 18),
+                              label: Text(lang == 'pl' ? 'Zapisz' : 'Save'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: _hasUnsavedChanges
+                                    ? AppColors.accent
+                                    : Colors.grey[700],
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              onPressed: _isSaving
+                                  ? null
+                                  : () async {
+                                      await _savePlanToDatabase();
+                                      setState(() {
+                                        _isEditMode = false;
+                                        _hasUnsavedChanges = false;
+                                      });
+                                    },
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.refresh, size: 18, color: Colors.white),
+                              label: Text(
+                                lang == 'pl' ? 'Nowa ankieta' : 'New questionnaire',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                side: const BorderSide(color: Colors.white38),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const QuestionnaireScreen()),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton.icon(
+                              icon: const Icon(Icons.edit_rounded, size: 18),
+                              label: Text(lang == 'pl' ? 'Edytuj plan' : 'Edit plan'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isEditMode = true;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.icon(
-                        icon: const Icon(Icons.build, size: 18),
-                        label: const Text('Stwórz własny'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.accent,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const CustomPlanBuilderScreen()),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
               ),
               
               // Plan view
               Expanded(
                 child: PlanView(
                   plan: _editablePlan!,
-                  onExerciseChanged: _updateExercise,
-                  onExerciseAdded: _addExercise,
-                  onExerciseRemoved: _removeExercise,
-                  onDayAdded: _addDay,
-                  onDayRemoved: _removeDay,
-                  onPlanExport: _exportPlan,
-                  onPlanImport: _importPlan,
+                  onExerciseChanged: _isEditMode ? _updateExercise : null,
+                  onExerciseAdded: _isEditMode ? _addExercise : null,
+                  onExerciseRemoved: _isEditMode ? _removeExercise : null,
+                  onDayAdded: _isEditMode ? _addDay : null,
+                  onDayRemoved: _isEditMode ? _removeDay : null,
+                  onDayChanged: _isEditMode ? _changeDay : null,
+                  onPlanExport: _isEditMode ? _exportPlan : null,
+                  onPlanImport: _isEditMode ? _importPlan : null,
                   unitSystem: unitSystem,
                 ),
               ),
