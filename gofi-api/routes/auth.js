@@ -40,7 +40,10 @@ router.post("/login", (req, res) => {
   
   
   pool.query(q, [email], (err, rows) => {
-    if (err) return res.status(500).json({ error: "Błąd serwera" });
+    if (err) {
+      console.error("Login DB error:", err);
+      return res.status(500).json({ error: "Błąd serwera" });
+    }
     if (!rows.length) return res.status(401).json({ error: "Nieprawidłowy login lub hasło" });
 
     const u = rows[0];

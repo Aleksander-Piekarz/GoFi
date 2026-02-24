@@ -28,8 +28,19 @@ class QuestionnaireService {
     return <String, dynamic>{};
   }
 
+  // Zapisz tylko odpowiedzi (bezpłatne)
   Future<void> saveAnswers(Map<String, dynamic> answers) async {
     await _api.post('/questionnaire/answers', body: answers);
+  }
+
+  // Wygeneruj plan na podstawie OSTATNICH zapisanych odpowiedzi (płatne)
+  Future<Map<String, dynamic>> generatePlan() async {
+    // Pobierz ostatnie odpowiedzi
+    final answers = await getLatestAnswers();
+    if (answers.isEmpty) {
+      throw const ApiException('Brak zapisanych odpowiedzi. Najpierw wypełnij kwestionariusz.');
+    }
+    return submitAndGetPlan(answers);
   }
 
   Future<Map<String, dynamic>> submitAndGetPlan(Map<String, dynamic> answers) async {
@@ -46,8 +57,9 @@ class QuestionnaireService {
   // --- NOWOŚĆ: Pobieranie z obsługą offline ---
   Future<Map<String, dynamic>> getLatestPlan() async {
     try {
-      // 1. Próba pobrania z internetu (najświeższa wersja)
-      final res = await _api.get('/questionnaire/plan/latest');
+      // 1. Próba pobrania z internetu z timeout 15s
+      final res = await _api.get('/questionnaire/plan/latest')
+          .timeout(const Duration(seconds: 15));
       final obj = res['data'] ?? res;
       final plan = Map<String, dynamic>.from(obj as Map);
 
@@ -58,14 +70,14 @@ class QuestionnaireService {
       
       return plan;
     } catch (e) {
-      // 3. W przypadku błędu (np. brak internetu), próbujemy wczytać z pamięci
+      // 3. W przypadku błędu (np. brak internetu, timeout), próbujemy wczytać z pamięci
       print('Błąd sieci: $e. Próba wczytania planu z pamięci urządzenia...');
       final cached = await _loadCachedPlan();
       if (cached != null && cached.isNotEmpty) {
         return cached;
       }
-      // Jeśli nie ma sieci I nie ma cache (np. pierwsze uruchomienie), rzucamy błąd dalej
-      rethrow;
+      // Jeśli nie ma cache - zwróć pusty plan (nie blokuj UI)
+      return {};
     }
   }
 
@@ -90,5 +102,29 @@ class QuestionnaireService {
       print('Błąd odczytu cache planu: $e');
     }
     return null;
+  }
+
+  // --- WŁASNY PLAN ---
+  Future<Map<String, dynamic>> saveCustomPlan(Map<String, dynamic> plan) async {
+    final res = await _api.post('/questionnaire/plan/custom', body: plan);
+    final obj = res['data'] ?? res;
+    final savedPlan = Map<String, dynamic>.from(obj as Map);
+    
+    // Zapisujemy w cache
+    await _cachePlan(plan);
+    
+    return savedPlan;
+  }
+
+  // --- AKTUALIZACJA AKTUALNEGO PLANU ---
+  Future<Map<String, dynamic>> updateLatestPlan(Map<String, dynamic> plan) async {
+    final res = await _api.put('/questionnaire/plan/latest', body: plan);
+    final obj = res['data'] ?? res;
+    final savedPlan = Map<String, dynamic>.from(obj as Map);
+    
+    // Aktualizujemy cache
+    await _cachePlan(plan);
+    
+    return savedPlan;
   }
 }

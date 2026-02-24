@@ -26,10 +26,7 @@ ios/Flutter/Flutter.framework/
 ios/Flutter/Flutter.podspec
 
 # Backend (gofi-api)
-gofi-api/.env
-gofi-api/node_modules/
-gofi-api/dist/
-gofi-api/.next/
+gofi-api
 
 # Logs & temp
 *.log

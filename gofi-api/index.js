@@ -1,16 +1,33 @@
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 require("dotenv").config();
 
-const { db } = require("./lib/db");
+const { pool } = require("./lib/db");
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Statyczne pliki - obrazy ćwiczeń
+app.use('/images', express.static(path.join(__dirname, 'public/images'), {
+  maxAge: '7d',
+  etag: true
+}));
+
+// Statyczne pliki - pobieranie APK
+app.use('/downloads', express.static(path.join(__dirname, 'public/downloads'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.apk')) {
+      res.set('Content-Type', 'application/vnd.android.package-archive');
+      res.set('Content-Disposition', 'attachment');
+    }
+  }
+}));
 
 app.use('/api/exercises', require('./routes/exercises'));
 
@@ -24,16 +41,27 @@ app.get("/health", (_req, res) => res.send("ok"));
 app.use("/api/users", userRoutes);
 
 app.use('/api/log', require('./routes/log'));
+app.use('/api/workout', require('./routes/session'));
 
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/questionnaire', require('./routes/questionnaire'));
+app.use('/api/app-version', require('./routes/appVersion'));
+app.get("/", (req, res) => {
+  res.json({ message: "GoFi API is running", version: "test-branch" });
+});
 
 
 app.use((req, res) => {
   res.status(404).json({error:'Not found', method:req.method, url:req.originalUrl});
 });
 
+// Error handler
+app.use((err, req, res, _next) => {
+  console.error('Error:', err.stack);
+  res.status(500).json({ error: 'Internal server error', message: err.message });
+});
+
 app.listen(port, "0.0.0.0", () => {
-  console.log(`API listening on http://10.10.0.1:${port}`);
+  console.log(`API listening on http://91.123.188.186:${port}`);
 });

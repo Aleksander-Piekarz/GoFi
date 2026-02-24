@@ -43,16 +43,13 @@ class _StartingScreenState extends ConsumerState<StartingScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. TŁO - Powrót do Alignment.center (domyślne)
           Positioned.fill(
             child: Image.asset(
-              'assets/images/startingbackground2.png', 
+              'assets/images/startingbackground2.png',
               fit: BoxFit.cover,
-              alignment: Alignment.center, // <-- Gwarantuje widoczność logo na środku
+              alignment: Alignment.center,
             ),
           ),
-          
-          // 2. CIEMNIEJSZY GRADIENT (Dla lepszej czytelności przycisków)
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -62,22 +59,19 @@ class _StartingScreenState extends ConsumerState<StartingScreen> {
                   colors: [
                     Colors.transparent,
                     Colors.black.withOpacity(0.0),
-                    Colors.black.withOpacity(0.8), // Mocniejsze przyciemnienie na dole
+                    Colors.black.withOpacity(0.8),
                   ],
                   stops: const [0.5, 0.7, 1.0],
                 ),
               ),
             ),
           ),
-
-          // 3. PRZYCISKI
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // Przycisk "Rozpocznij Teraz"
                   SizedBox(
                     width: double.infinity,
                     height: 56,
@@ -85,7 +79,7 @@ class _StartingScreenState extends ConsumerState<StartingScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFD605B),
                         foregroundColor: Colors.white,
-                        elevation: 4, // Lekki cień dla lepszego wyróżnienia
+                        elevation: 4,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -100,7 +94,7 @@ class _StartingScreenState extends ConsumerState<StartingScreen> {
                         "Rozpocznij Teraz",
                         style: TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.w700, // Pogrubienie
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -108,7 +102,6 @@ class _StartingScreenState extends ConsumerState<StartingScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Link "Zaloguj się"
                   Center(
                     child: GestureDetector(
                       onTap: () {
@@ -118,7 +111,6 @@ class _StartingScreenState extends ConsumerState<StartingScreen> {
                         );
                       },
                       child: Container(
-                        // Dodatkowy kontener zwiększający obszar kliknięcia
                         padding: const EdgeInsets.all(8.0),
                         child: RichText(
                           text: TextSpan(

@@ -13,23 +13,31 @@ class LogService {
 
   Future<List<dynamic>> getLoggedExercises() async {
     final res = await _api.get('/log/logged-exercises');
-    return (res['data'] ?? res) as List<dynamic>; 
+    if (res['data'] is List) return res['data'] as List<dynamic>;
+    if (res is List) return res as List<dynamic>;
+    return [];
   }
 
   Future<List<dynamic>> getExerciseHistory(String exerciseCode) async {
     final res = await _api.get('/log/exercise/$exerciseCode');
-    return (res['data'] ?? res) as List<dynamic>;
+    if (res['data'] is List) return res['data'] as List<dynamic>;
+    if (res is List) return res as List<dynamic>;
+    return [];
   }
 
   
   Future<List<dynamic>> getWorkoutLogs() async {
     final res = await _api.get('/log/workouts');
-    return (res['data'] ?? res) as List<dynamic>;
+    // API zwraca tablicę, która jest opakowana jako {'data': [...]}
+    if (res['data'] is List) return res['data'] as List<dynamic>;
+    if (res is List) return res as List<dynamic>;
+    return [];
   }
 
-  Future<List<dynamic>> getWorkoutLogDetails(int logId) async {
+  Future<Map<String, dynamic>> getWorkoutLogDetails(int logId) async {
     final res = await _api.get('/log/workout/$logId');
-    return (res['data'] ?? res) as List<dynamic>;
+    // API zwraca { workout: {...}, exercises: [...] }
+    return res as Map<String, dynamic>;
   }
   Future<void> saveWeight(double weight) async {
     await _api.post('/log/weight', body: {'weight': weight});
@@ -45,6 +53,8 @@ class LogService {
 
   Future<List<dynamic>> getWeightHistory() async {
     final res = await _api.get('/log/weight-history');
-    return (res['data'] ?? res) as List<dynamic>;
+    if (res['data'] is List) return res['data'] as List<dynamic>;
+    if (res is List) return res as List<dynamic>;
+    return [];
   }
 }

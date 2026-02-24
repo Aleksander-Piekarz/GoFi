@@ -4,6 +4,8 @@ import 'package:gofi/screens/profile_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'app/theme.dart';
 import 'screens/starting_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/register_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,20 +13,24 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeProvider);
+    
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: appTheme, 
-        routes: {
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: themeMode,
+      routes: {
         '/': (context) => const StartingScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
         '/profile': (context) => const ProfileScreen(),
       },
-
     );
-    
   }
 }

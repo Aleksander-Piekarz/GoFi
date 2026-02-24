@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api/providers.dart';
 import 'home_screen.dart';
+import 'custom_plan_builder_screen.dart';
 import '../app/theme.dart';
 
 class QuestionnaireScreen extends ConsumerStatefulWidget {
@@ -16,11 +17,19 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
   final Map<String, dynamic> _answers = {};
   bool _loading = true;
   bool _saving = false;
+  bool _generating = false;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _bootstrap();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _bootstrap() async {
@@ -53,23 +62,61 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
     return true;
   }
 
+  // --- NAGŁÓWEK SEKCJI ---
+  Widget _buildSectionHeader(Map q) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24, top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            q['label'] ?? '',
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+          if (q['description'] != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              q['description'],
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.6),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   // --- WIDOK PYTANIA ---
   Widget _buildQuestion(Map q) {
     final id = q['id'] as String;
     final type = q['type'] as String;
     final label = q['label'] as String? ?? id;
+    final icon = q['icon'] as String?;
+    final hint = q['hint'] as String?;
+
+    // Dla nagłówków sekcji
+    if (type == 'header') {
+      return _buildSectionHeader(q);
+    }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.bgAlt,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           )
         ],
         border: Border.all(color: Colors.white.withOpacity(0.05)),
@@ -77,16 +124,48 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 18,
-              color: Colors.white,
-              letterSpacing: 0.5,
-            ),
+          Row(
+            children: [
+              if (icon != null) ...[
+                Text(icon, style: const TextStyle(fontSize: 20)),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+              if (q['optional'] == true)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white10,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Opcjonalne',
+                    style: TextStyle(fontSize: 11, color: Colors.white38),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 20),
+          if (hint != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              hint,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.white.withOpacity(0.5),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
           _buildInputContent(type, id, q),
         ],
       ),
@@ -99,20 +178,76 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
         final options = (q['options'] as List).cast<Map>();
         final current = _answers[id]?.toString();
         
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
+        return Column(
           children: options.map((opt) {
             final value = opt['value'].toString();
             final isSelected = current == value;
+            final description = opt['description'] as String?;
             
-            return _buildModernChip(
-              label: opt['label']?.toString() ?? value,
-              isSelected: isSelected,
+            return GestureDetector(
               onTap: () => setState(() {
                 _answers[id] = value;
                 if (id == 'location') _answers.remove('equipment');
               }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.accent.withOpacity(0.15) : const Color(0xFF252525),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isSelected ? AppColors.accent : Colors.white10,
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isSelected ? AppColors.accent : Colors.transparent,
+                        border: Border.all(
+                          color: isSelected ? AppColors.accent : Colors.white30,
+                          width: 2,
+                        ),
+                      ),
+                      child: isSelected 
+                        ? const Icon(Icons.check, size: 14, color: Colors.white)
+                        : null,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            opt['label']?.toString() ?? value,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.white70,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              fontSize: 15,
+                            ),
+                          ),
+                          if (description != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              description,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isSelected ? Colors.white60 : Colors.white38,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             );
           }).toList(),
         );
@@ -282,11 +417,64 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
     );
   }
 
-  Future<void> _submitAndNavigate() async {
+  Future<void> _saveAnswersOnly() async {
     setState(() => _saving = true);
+    try {
+      // Walidacja
+      for (final raw in _questions) {
+        final q = raw as Map;
+        final type = q['type'] as String?;
+        if (type == 'header') continue;
+        if (!_shouldShow(q)) continue;
+        final id = q['id'];
+        final optional = (q['optional'] ?? false) as bool;
+        final v = _answers[id];
+        if (!optional && (v == null || (v is List && v.isEmpty))) {
+          throw 'Uzupełnij pole: ${q['label'] ?? id}';
+        }
+      }
+
+      final svc = ref.read(questionnaireServiceProvider);
+      await svc.saveAnswers(_answers);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 10),
+              Text('Odpowiedzi zapisane!'),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _submitAndNavigate() async {
+    setState(() => _generating = true);
     try {
       for (final raw in _questions) {
         final q = raw as Map;
+        final type = q['type'] as String?;
+        
+        // Pomijamy nagłówki sekcji - nie wymagają odpowiedzi
+        if (type == 'header') continue;
+        
         if (!_shouldShow(q)) continue;
         final id = q['id'];
         final optional = (q['optional'] ?? false) as bool;
@@ -317,7 +505,7 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
         )
       );
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() => _generating = false);
     }
   }
 
@@ -335,7 +523,7 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
           children: [
             // --- HEADER ---
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(
                 children: [
                   Container(
@@ -349,30 +537,56 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  const Text(
-                    'Twój Profil',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Twój Profil',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          'Odpowiedz na pytania, stworzymy Twój plan',
+                          style: TextStyle(fontSize: 13, color: Colors.white54),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
             
+            // --- PROGRESS BAR ---
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: _calculateProgress(),
+                  backgroundColor: Colors.white10,
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
+                  minHeight: 4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            
             // --- LISTA PYTAŃ ---
             Expanded(
               child: ListView.builder(
+                controller: _scrollController,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: _questions.length,
                 itemBuilder: (_, i) {
                   final q = _questions[i] as Map;
                   if (!_shouldShow(q)) return const SizedBox.shrink();
-                  // Dodajemy padding na dole ostatniego elementu
                   if (i == _questions.length - 1) {
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 100),
+                      padding: const EdgeInsets.only(bottom: 140),
                       child: _buildQuestion(q),
                     );
                   }
@@ -383,49 +597,149 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
           ],
         ),
       ),
-      // --- FIXED BOTTOM BUTTON ---
+      // --- FIXED BOTTOM ---
       bottomSheet: Container(
         color: AppColors.bg,
-        padding: const EdgeInsets.all(20),
-        child: SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
-              elevation: 8,
-              shadowColor: AppColors.accent.withOpacity(0.5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Przycisk generowania planu (PŁATNY)
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: Colors.white,
+                  elevation: 8,
+                  shadowColor: AppColors.accent.withOpacity(0.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                onPressed: (_saving || _generating) ? null : _submitAndNavigate,
+                child: _generating
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 3),
+                      )
+                    : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.auto_awesome),
+                          SizedBox(width: 10),
+                          Text(
+                            'Wygeneruj plan',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
               ),
             ),
-            onPressed: _saving ? null : _submitAndNavigate,
-            child: _saving
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 3),
-                  )
-                : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.auto_awesome),
-                      SizedBox(width: 10),
-                      Text(
-                        'Generuj Plan',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
+            const SizedBox(height: 10),
+            // Rząd z dwoma przyciskami: Zapisz i Własny plan
+            Row(
+              children: [
+                // Przycisk zapisywania kwestionariusza (BEZPŁATNY)
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.green, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                    ],
+                      onPressed: (_saving || _generating) ? null : _saveAnswersOnly,
+                      child: _saving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  color: Colors.green, strokeWidth: 2),
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.save_outlined, size: 18, color: Colors.green),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Zapisz',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.green),
+                                ),
+                              ],
+                            ),
+                    ),
                   ),
-          ),
+                ),
+                const SizedBox(width: 10),
+                // Przycisk własnego planu
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white38),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: (_saving || _generating) ? null : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CustomPlanBuilderScreen()),
+                        );
+                      },
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.build_outlined, size: 18),
+                          SizedBox(width: 6),
+                          Text(
+                            'Własny plan',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  double _calculateProgress() {
+    if (_questions.isEmpty) return 0;
+    int answered = 0;
+    int total = 0;
+    for (final q in _questions) {
+      final map = q as Map;
+      if (map['type'] == 'header') continue;
+      if (!_shouldShow(map)) continue;
+      if (map['optional'] == true) continue;
+      total++;
+      final id = map['id'];
+      final val = _answers[id];
+      if (val != null && (val is! List || val.isNotEmpty)) {
+        answered++;
+      }
+    }
+    return total > 0 ? answered / total : 0;
   }
 }
